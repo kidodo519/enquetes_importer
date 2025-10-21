@@ -1,0 +1,70 @@
+﻿db:
+  host: incrazetech-app-db-prod.app-prod.incrazetech.dev
+  port: 5432
+  user: user_kinokuniya_insert
+  password: h3fsdxmkbekq
+  database: reservation_db_kinokuniya
+
+csv:
+  encoding: Shift_JIS
+
+mappings:
+  string:
+    room_number: "部屋番号"
+    repeat: "来館頻度"
+    how_to_know: "当館を知ったきっかけ"
+    tel_qual: "電話対応の質"
+    dinner_taste: "夕食の内容について　味"
+    dinner_sat: "夕食の内容について　満足度"
+    dinner_vol: "夕食の内容について　ボリューム"
+    dinner_menu: "夕食の内容について　献立"
+    dinner_pace: "夕食の内容について　食事の提供ペース"
+    morning_taste: "朝食の内容について　味"
+    morning_sat: "朝食の内容について　満足度"
+    morning_vol: "朝食の内容について　ボリューム"
+    morning_menu: "朝食の内容について　献立"
+    room_clean: "お部屋の清潔状況"
+    bath_clean: "お風呂の清掃状況"
+    facility_clean: "館内全体の清掃状況"
+    staff_service: "スタッフのサービス全般について"
+    price_eval: "料金設定はいかがでしたでしょうか"
+    repeat_request: "もう一度利用したいと思いますか？"
+
+
+  text:
+    dinner_text: "夕食の内容について　自由記入欄"
+    best_dish: "献立の中で一番美味しかった料理"
+    add_dish: "献立に加えて欲しい料理"
+    morning_text: "朝食の内容について　自由記入欄"
+    impression: "その他自由記入欄"
+
+     
+  date:
+    time_stamp: "タイムスタンプ"
+    start_date: "宿泊日"
+  
+  datetime:
+
+
+facility:
+  facility_code:
+    kinokuniya: 1
+    kino-hanare: 2
+    kino-bettei: 3
+    oyadohiruta: 4
+    yuumi: 5
+    sazane: 6
+    amane: 7
+    danqoo: 8
+    misasa: 9
+  
+  url:
+    kinokuniya: https://docs.google.com/spreadsheets/d/1FdH6YPiB4zkaZV1ApkJ_3PjNfQp8oNeiTqkr6mWxQ7U/edit?gid=29
+    kino-hanare: https://docs.google.com/spreadsheets/d/1dEgzFpZZmvyPdKuABuqtsgaPCaqHy7NfuKIWAE4jlok/edit?gid=214
+    kino-bettei: https://docs.google.com/spreadsheets/d/1QnGZ-rO3oepz2HcQfEdXTTcrzwpXBYOnbhv7b5eRtcU/edit?gid=1592
+    oyadohiruta: https://docs.google.com/spreadsheets/d/1Wt_DspBEIf85j2XQnX9YLuydiJJcw9SAW2hFzUJD0L0/edit?gid=9210667
+    yuumi: https://docs.google.com/spreadsheets/d/11DRwIFNB8q91AR5gbPS69jd4KRfmse84yNyheDvOwvI/edit?gid=1418122348
+    sazane: https://docs.google.com/spreadsheets/d/1QGPIN9mbbfNpJVacKrOwIt_40YgUOZKK5zlJn2vFJ6M/edit?gid=172988882
+    amane: https://docs.google.com/spreadsheets/d/1XZUp__vp6AnS1J5f_xPj1WEpgbEMmOxhkZyGgYtAPGs/edit?gid=1227145091
+    danqoo: 
+    misasa: https://docs.google.com/spreadsheets/d/1KGT9f802GgsxCFgLhKd1-8jG9hqmfmYf8MMlFZJdZJk/edit?resourcekey=&gid=1341281595
