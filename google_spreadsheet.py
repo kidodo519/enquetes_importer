@@ -226,6 +226,7 @@ def open_worksheet(
     facility_config: Dict[str, Any],
     default_worksheet: Optional[str],
 ):
+
     spreadsheet_config = facility_config.get("spreadsheet") or {}
     spreadsheet_id = normalize_optional_string(
         spreadsheet_config.get("id") or facility_config.get("spreadsheet_id")
@@ -339,6 +340,7 @@ def import_facility(
 
     worksheet = open_worksheet(client, facility_config, default_worksheet)
     records = read_records(worksheet, extract_required_headers(mapping))
+
 
     logger.info(
         "Fetched %d rows from %s/%s", len(records), corporation, facility_name
