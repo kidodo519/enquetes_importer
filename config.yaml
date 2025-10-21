@@ -181,14 +181,17 @@ corporations:
         facility_code: 1
         spreadsheet:
           id: 1IFtVvUa72G-CVe1iSid3_t0mllDQoeIflyLKme8GTmg
+        mapping: japanese
       roka-japanese:
         facility_code: 2
         spreadsheet:
           id: 1aVhUCbttqfQZ-NnNp8ltI6Iy_MGSpgrgML0nO_nRyzs
+        mapping: japanese
       roka-english:
         facility_code: 2
         spreadsheet:
           id: 13_9WWRWfUKVYo6gBW5basvCTh7I8Q2OLaK2bJT3SSUA
+        mapping: english
 
 
   ginzansou:
@@ -281,6 +284,10 @@ corporations:
         facility_code: 1
         spreadsheet:
           id: 1fqPnxI-7YirT726GlqCyQgoERAuvggmCCQBP9ZJY-5s
+        imports:
+          - mapping: enquetes
+          - mapping: enquetes_text
+            table: enquetes_text
 
 
   kanon:

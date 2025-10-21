@@ -1,9 +1,11 @@
 import logging
 import os
 from argparse import ArgumentParser
+from collections import defaultdict
 from copy import deepcopy
+from dataclasses import dataclass
 from datetime import datetime
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Optional, Set, Tuple
 
 import gspread
 import jaconv
@@ -22,7 +24,85 @@ DEFAULT_SCOPE = [
 ]
 DEFAULT_TIMEZONE = tz.gettz("Asia/Tokyo") or tz.tzlocal()
 
+FIELD_SECTION_PREFIXES = ("string", "text", "integer", "date", "datetime")
+CONVERSION_PREFIX = "conversion"
+
+
+@dataclass
+class FieldSpec:
+    csv_header: str
+    conversion: Optional[Dict[str, str]] = None
+    clamp: Optional[Tuple[int, int]] = None
+
+
+@dataclass
+class ImportJob:
+    table: str
+    mapping: Dict[str, Dict[str, FieldSpec]]
+    mapping_name: Optional[str] = None
+
 logger = logging.getLogger(__name__)
+
+
+def is_section_key(key: str) -> bool:
+    return any(key == prefix or key.startswith(prefix) for prefix in FIELD_SECTION_PREFIXES)
+
+
+def is_conversion_key(key: str) -> bool:
+    return key == CONVERSION_PREFIX or key.startswith(CONVERSION_PREFIX)
+
+
+def is_mapping_definition_dict(value: Any) -> bool:
+    if not isinstance(value, dict):
+        return False
+
+    if not value:
+        return True
+
+    keys = list(value.keys())
+    return all(is_section_key(key) or is_conversion_key(key) for key in keys)
+
+
+def merge_mapping_catalog(
+    target: Dict[str, Any], catalog: Optional[Dict[str, Any]]
+) -> None:
+    if not catalog:
+        return
+
+    if is_mapping_definition_dict(catalog):
+        target["default"] = catalog
+        return
+
+    for key, value in catalog.items():
+        target[key] = value
+
+
+def apply_conversion(value: str, conversion: Optional[Dict[str, str]]) -> str:
+    if not value or not conversion:
+        return value
+    return conversion.get(value, value)
+
+
+def parse_integer_cell(value: str, clamp: Optional[Tuple[int, int]] = None) -> Optional[int]:
+    if not value:
+        return None
+
+    normalized_value = jaconv.z2h(value, digit=True, ascii=True).replace(",", "")
+
+    if normalized_value.isdecimal():
+        parsed = int(normalized_value)
+    else:
+        try:
+            parsed = int(float(normalized_value))
+        except ValueError:
+            return None
+
+    if clamp:
+        minimum, maximum = clamp
+        parsed = max(parsed, minimum)
+        parsed = min(parsed, maximum)
+
+    return parsed
 
 
 def build_parser() -> ArgumentParser:
@@ -105,19 +185,60 @@ def parse_datetime_value(value: Any) -> Optional[datetime]:
     return parsed
 
 
-def normalize_mapping(mapping: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
-    normalized: Dict[str, Dict[str, str]] = {}
-    for section in ("string", "text", "integer", "date", "datetime"):
-        value = mapping.get(section) or {}
+def normalize_mapping(mapping: Dict[str, Any]) -> Dict[str, Dict[str, FieldSpec]]:
+    conversions: Dict[str, Dict[str, str]] = {}
+
+    for key, value in mapping.items():
+        if not is_conversion_key(key):
+            continue
+        if value is None:
+            conversions[key[len(CONVERSION_PREFIX) :]] = {}
+            continue
         if not isinstance(value, dict):
-            raise TypeError(f"Mapping section '{section}' must be a dictionary.")
-        normalized[section] = {
-            db_key: normalize_header_name(csv_key) for db_key, csv_key in value.items()
+            raise TypeError(f"Conversion '{key}' must be a dictionary.")
+        suffix = key[len(CONVERSION_PREFIX) :]
+        conversions[suffix] = {
+            normalize_cell_value(source): normalize_cell_value(target)
+            for source, target in value.items()
         }
+
+    normalized: Dict[str, Dict[str, FieldSpec]] = {
+        section: {} for section in FIELD_SECTION_PREFIXES
+    }
+
+    for key, value in mapping.items():
+        if not is_section_key(key):
+            continue
+
+        if value is None:
+            value = {}
+
+        if not isinstance(value, dict):
+            raise TypeError(f"Mapping section '{key}' must be a dictionary.")
+
+        base_prefix = next(prefix for prefix in FIELD_SECTION_PREFIXES if key.startswith(prefix))
+        suffix = key[len(base_prefix) :]
+
+        for db_key, csv_key in value.items():
+            normalized_csv = normalize_header_name(csv_key)
+
+            conversion = conversions.get(suffix)
+            clamp: Optional[Tuple[int, int]] = None
+            if base_prefix == "integer" and suffix == "2":
+                clamp = (0, 100)
+
+            normalized[base_prefix][db_key] = FieldSpec(
+                csv_header=normalized_csv,
+                conversion=conversion,
+                clamp=clamp,
+            )
+
     return normalized
 
 
-def resolve_mapping(mappings: Dict[str, Any], reference: Any) -> Dict[str, Dict[str, str]]:
+def resolve_mapping(
+    mappings: Dict[str, Any], reference: Any
+) -> Dict[str, Dict[str, FieldSpec]]:
     if reference is None:
         reference = "default"
 
@@ -130,62 +251,86 @@ def resolve_mapping(mappings: Dict[str, Any], reference: Any) -> Dict[str, Dict[
     else:
         raise TypeError("Mapping reference must be either a string key or a dictionary.")
 
+    conversion_entries = {
+        key: deepcopy(value)
+        for key, value in mappings.items()
+        if isinstance(key, str) and is_conversion_key(key)
+    }
+
+    for key, value in conversion_entries.items():
+        mapping.setdefault(key, value)
+
     return normalize_mapping(mapping)
 
 
-def build_ordered_keys(mapping: Dict[str, Dict[str, str]]) -> List[str]:
+def build_ordered_keys(mapping: Dict[str, Dict[str, FieldSpec]]) -> List[str]:
     ordered_keys: List[str] = []
-    for section in ("string", "text", "integer", "date", "datetime"):
+    for section in FIELD_SECTION_PREFIXES:
         ordered_keys.extend(mapping[section].keys())
     ordered_keys.extend(GENERATED_FIELDS)
     return ordered_keys
 
 
-def make_record_from_row(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]) -> Dict[str, Any]:
+def make_record_from_row(
+    row: Dict[str, Any], mapping: Dict[str, Dict[str, FieldSpec]]
+) -> Dict[str, Any]:
     record: Dict[str, Any] = {}
 
-    for db_key, csv_key in mapping["string"].items():
-        value = normalize_cell_value(row.get(csv_key))
+    for db_key, field in mapping["string"].items():
+        value = normalize_cell_value(row.get(field.csv_header))
+        value = apply_conversion(value, field.conversion)
         record[db_key] = jaconv.h2z(value) if value else None
 
-    for db_key, csv_key in mapping["text"].items():
-        value = normalize_cell_value(row.get(csv_key))
+    for db_key, field in mapping["text"].items():
+        value = normalize_cell_value(row.get(field.csv_header))
+        value = apply_conversion(value, field.conversion)
         value = replace_invalid_shiftjis_chars(value)
         record[db_key] = jaconv.h2z(value) if value else None
 
-    for db_key, csv_key in mapping["integer"].items():
-        value = normalize_cell_value(row.get(csv_key))
-        if value:
-            normalized_value = jaconv.z2h(value, digit=True, ascii=True)
-            record[db_key] = int(normalized_value) if normalized_value.isdecimal() else None
-        else:
-            record[db_key] = None
+    for db_key, field in mapping["integer"].items():
+        value = normalize_cell_value(row.get(field.csv_header))
+        converted_value = apply_conversion(value, field.conversion)
+        record[db_key] = parse_integer_cell(converted_value, field.clamp)
 
-    for db_key, csv_key in mapping["date"].items():
-        value = normalize_cell_value(row.get(csv_key))
+    for db_key, field in mapping["date"].items():
+        value = normalize_cell_value(row.get(field.csv_header))
         parsed = parse_datetime_value(value)
         record[db_key] = parsed.date() if parsed else None
 
-    for db_key, csv_key in mapping["datetime"].items():
-        value = normalize_cell_value(row.get(csv_key))
+    for db_key, field in mapping["datetime"].items():
+        value = normalize_cell_value(row.get(field.csv_header))
         parsed = parse_datetime_value(value)
         record[db_key] = parsed if parsed else None
 
     return record
 
 
-def build_enquete_key(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]) -> Optional[str]:
-    room_header = mapping["string"].get("room_number")
-    start_date_header = mapping["date"].get("start_date") or mapping["datetime"].get("start_date")
+def build_enquete_key(
+    row: Dict[str, Any], mapping: Dict[str, Dict[str, FieldSpec]]
+) -> Optional[str]:
+    room_field = (
+        mapping["string"].get("room_number")
+        or mapping["integer"].get("room_number")
+    )
+    start_field = mapping["date"].get("start_date") or mapping["datetime"].get("start_date")
 
-    if not room_header or not start_date_header:
+    if not room_field or not start_field:
         return None
 
-    room_value = jaconv.z2h(normalize_cell_value(row.get(room_header)), digit=True, ascii=True)
-    if not room_value or not room_value.isdecimal():
+    room_value_raw = normalize_cell_value(row.get(room_field.csv_header))
+    room_value_raw = apply_conversion(room_value_raw, room_field.conversion)
+
+    if room_field in mapping["integer"].values():
+        parsed_room = parse_integer_cell(room_value_raw, room_field.clamp)
+        room_value = str(parsed_room) if parsed_room is not None else None
+    else:
+        normalized = jaconv.z2h(room_value_raw, digit=True, ascii=True)
+        room_value = normalized if normalized and normalized.isdecimal() else None
+
+    if not room_value:
         return None
 
-    start_date_value = normalize_cell_value(row.get(start_date_header))
+    start_date_value = normalize_cell_value(row.get(start_field.csv_header))
     parsed = parse_datetime_value(start_date_value)
     if not parsed:
         return None
@@ -194,7 +339,7 @@ def build_enquete_key(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]) -
 
 
 def build_generated_fields(
-    row: Dict[str, Any], mapping: Dict[str, Dict[str, str]], facility_code: int
+    row: Dict[str, Any], mapping: Dict[str, Dict[str, FieldSpec]], facility_code: int
 ) -> Dict[str, Any]:
     return {
         "facility_code": facility_code,
@@ -272,10 +417,12 @@ def build_header_index(headers: Iterable[Any]) -> Dict[str, int]:
     return index
 
 
-def extract_required_headers(mapping: Dict[str, Dict[str, str]]) -> Set[str]:
+def extract_required_headers(mapping: Dict[str, Dict[str, FieldSpec]]) -> Set[str]:
     headers: Set[str] = set()
-    for section in ("string", "text", "integer", "date", "datetime"):
-        headers.update(mapping[section].values())
+    for section in FIELD_SECTION_PREFIXES:
+        for field in mapping[section].values():
+            if field.csv_header:
+                headers.add(field.csv_header)
     return headers
 
 
@@ -317,63 +464,142 @@ def import_facility(
     corporation_config: Dict[str, Any],
     base_mappings: Dict[str, Any],
     default_worksheet: Optional[str],
-    table_name: str,
+    default_table_name: str,
+    cleared_facilities: Dict[str, Set[int]],
 ) -> None:
     if "facility_code" not in facility_config:
         raise ValueError("'facility_code' is required in each facility configuration.")
 
     facility_code = facility_config["facility_code"]
 
-    available_mappings: Dict[str, Any] = dict(base_mappings)
-    available_mappings.update(corporation_config.get("mappings", {}) or {})
+    available_mappings: Dict[str, Any] = {}
+    merge_mapping_catalog(available_mappings, base_mappings)
+    merge_mapping_catalog(available_mappings, corporation_config.get("mappings", {}) or {})
+    merge_mapping_catalog(available_mappings, facility_config.get("mappings", {}) or {})
 
-    facility_mappings = facility_config.get("mappings", {}) or {}
-    available_mappings.update(facility_mappings)
+    facility_default_table = normalize_optional_string(facility_config.get("table"))
+    default_table = facility_default_table or default_table_name
 
-    mapping_reference = sanitize_mapping_reference(facility_config.get("mapping"))
-    if mapping_reference is None:
-        mapping_reference = sanitize_mapping_reference(
-            corporation_config.get("mapping")
+    jobs: List[ImportJob] = []
+
+    imports_config = facility_config.get("imports")
+    if imports_config:
+        if not isinstance(imports_config, list):
+            raise TypeError("'imports' configuration must be a list if provided.")
+
+        for entry in imports_config:
+            table_override = default_table
+            mapping_reference: Any = None
+            mapping_label: Optional[str] = None
+
+            if isinstance(entry, dict) and not is_mapping_definition_dict(entry):
+                table_override = (
+                    normalize_optional_string(entry.get("table")) or default_table
+                )
+                if "mapping" in entry:
+                    mapping_reference = entry["mapping"]
+                    if isinstance(mapping_reference, str):
+                        mapping_label = mapping_reference
+                else:
+                    mapping_reference = entry
+            else:
+                mapping_reference = entry
+
+            mapping_reference = sanitize_mapping_reference(mapping_reference)
+            mapping = resolve_mapping(available_mappings, mapping_reference)
+            if mapping_label is None and isinstance(mapping_reference, str):
+                mapping_label = mapping_reference
+
+            jobs.append(
+                ImportJob(
+                    table=table_override,
+                    mapping=mapping,
+                    mapping_name=mapping_label,
+                )
+            )
+    else:
+        mapping_reference = sanitize_mapping_reference(facility_config.get("mapping"))
+        if mapping_reference is None:
+            mapping_reference = sanitize_mapping_reference(
+                corporation_config.get("mapping")
+            )
+        mapping = resolve_mapping(available_mappings, mapping_reference)
+        mapping_label = mapping_reference if isinstance(mapping_reference, str) else None
+        jobs.append(
+            ImportJob(table=default_table, mapping=mapping, mapping_name=mapping_label)
         )
 
-    mapping = resolve_mapping(available_mappings, mapping_reference)
-
-    worksheet = open_worksheet(client, facility_config, default_worksheet)
-    records = read_records(worksheet, extract_required_headers(mapping))
-
-
-    logger.info(
-        "Fetched %d rows from %s/%s", len(records), corporation, facility_name
-    )
-
-    ordered_keys = list(build_ordered_keys(mapping))
-    insert_query = f"INSERT INTO {table_name} ({', '.join(ordered_keys)}) VALUES %s"
-
-    cursor.execute(
-        f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
-    )
-
-    if not records:
-        connection.commit()
+    if not jobs:
         logger.info(
-            "No rows to import for %s/%s. Existing records have been cleared.",
+            "No import jobs configured for %s/%s. Skipping.",
             corporation,
             facility_name,
         )
         return
 
-    buffer = []
-    for row in records:
-        record = make_record_from_row(row, mapping)
-        record.update(build_generated_fields(row, mapping, facility_code))
-        buffer.append([record.get(key) for key in ordered_keys])
+    worksheet = open_worksheet(client, facility_config, default_worksheet)
 
-    extras.execute_values(cursor, insert_query, buffer)
-    connection.commit()
+    required_headers: Set[str] = set()
+    for job in jobs:
+        required_headers.update(extract_required_headers(job.mapping))
+
+    records = read_records(worksheet, required_headers)
 
     logger.info(
-        "Imported %d rows for %s/%s.", len(buffer), corporation, facility_name
+        "Fetched %d rows from %s/%s", len(records), corporation, facility_name
     )
+
+    for job in jobs:
+        ordered_keys = list(build_ordered_keys(job.mapping))
+        insert_query = f"INSERT INTO {job.table} ({', '.join(ordered_keys)}) VALUES %s"
+
+        cleared_for_table = cleared_facilities.setdefault(job.table, set())
+        if facility_code not in cleared_for_table:
+            cursor.execute(
+                f"DELETE FROM {job.table} WHERE facility_code = %s",
+                (facility_code,),
+            )
+            cleared_for_table.add(facility_code)
+
+        if not records:
+            connection.commit()
+            logger.info(
+                "No rows to import for %s/%s (table: %s, mapping: %s).",
+                corporation,
+                facility_name,
+                job.table,
+                job.mapping_name or "default",
+            )
+            continue
+
+        buffer: List[List[Any]] = []
+        for row in records:
+            record = make_record_from_row(row, job.mapping)
+            record.update(build_generated_fields(row, job.mapping, facility_code))
+            buffer.append([record.get(key) for key in ordered_keys])
+
+        if not buffer:
+            connection.commit()
+            logger.info(
+                "No rows to import for %s/%s (table: %s, mapping: %s).",
+                corporation,
+                facility_name,
+                job.table,
+                job.mapping_name or "default",
+            )
+            continue
+
+        extras.execute_values(cursor, insert_query, buffer)
+        connection.commit()
+
+        logger.info(
+            "Imported %d rows for %s/%s into %s (mapping: %s).",
+            len(buffer),
+            corporation,
+            facility_name,
+            job.table,
+            job.mapping_name or "default",
+        )
 
 
 def main() -> None:
@@ -441,6 +667,7 @@ def main() -> None:
 
         connection = psycopg2.connect(**db_config)
         try:
+            cleared_facilities: Dict[str, Set[int]] = defaultdict(set)
             for facility_name, facility_config in facilities.items():
                 if not facility_selected(corporation, facility_name, facility_filters):
                     continue
@@ -460,6 +687,7 @@ def main() -> None:
                             mappings,
                             default_worksheet,
                             args.table,
+                            cleared_facilities,
                         )
                 except ValueError as exc:
                     connection.rollback()
