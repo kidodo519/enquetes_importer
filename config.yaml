@@ -4,40 +4,6 @@ csv:
 google:
   worksheet: "フォームの回答 1"
 
-mappings:
-  default:
-    string:
-      room_number: "部屋番号"
-      repeat: "来館頻度"
-      how_to_know: "当館を知ったきっかけ"
-      tel_qual: "電話対応の質"
-      dinner_taste: "夕食の内容について　味"
-      dinner_sat: "夕食の内容について　満足度"
-      dinner_vol: "夕食の内容について　ボリューム"
-      dinner_menu: "夕食の内容について　献立"
-      dinner_pace: "夕食の内容について　食事の提供ペース"
-      morning_taste: "朝食の内容について　味"
-      morning_sat: "朝食の内容について　満足度"
-      morning_vol: "朝食の内容について　ボリューム"
-      morning_menu: "朝食の内容について　献立"
-      room_clean: "お部屋の清潔状況"
-      bath_clean: "お風呂の清掃状況"
-      facility_clean: "館内全体の清掃状況"
-      staff_service: "スタッフのサービス全般について"
-      price_eval: "料金設定はいかがでしたでしょうか"
-      repeat_request: "もう一度利用したいと思いますか？"
-    text:
-      dinner_text: "夕食の内容について　自由記入欄"
-      best_dish: "献立の中で一番美味しかった料理"
-      add_dish: "献立に加えて欲しい料理"
-      morning_text: "朝食の内容について　自由記入欄"
-      impression: "その他自由記入欄"
-    integer: {}
-    date:
-      time_stamp: "タイムスタンプ"
-      start_date: "宿泊日"
-    datetime: {}
-
 corporations:
   kinokuniya:
     db:
@@ -46,40 +12,73 @@ corporations:
       user: user_kinokuniya_insert
       password: h3fsdxmkbekq
       database: reservation_db_kinokuniya
+    mappings:
+      default:
+        string:
+          room_number: "部屋番号"
+          repeat: "来館頻度"
+          how_to_know: "当館を知ったきっかけ"
+          tel_qual: "電話対応の質"
+          dinner_taste: "夕食の内容について　味"
+          dinner_sat: "夕食の内容について　満足度"
+          dinner_vol: "夕食の内容について　ボリューム"
+          dinner_menu: "夕食の内容について　献立"
+          dinner_pace: "夕食の内容について　食事の提供ペース"
+          morning_taste: "朝食の内容について　味"
+          morning_sat: "朝食の内容について　満足度"
+          morning_vol: "朝食の内容について　ボリューム"
+          morning_menu: "朝食の内容について　献立"
+          room_clean: "お部屋の清潔状況"
+          bath_clean: "お風呂の清掃状況"
+          facility_clean: "館内全体の清掃状況"
+          staff_service: "スタッフのサービス全般について"
+          price_eval: "料金設定はいかがでしたでしょうか"
+          repeat_request: "もう一度利用したいと思いますか？"
+        text:
+          dinner_text: "夕食の内容について　自由記入欄"
+          best_dish: "献立の中で一番美味しかった料理"
+          add_dish: "献立に加えて欲しい料理"
+          morning_text: "朝食の内容について　自由記入欄"
+          impression: "その他自由記入欄"
+        integer: {}
+        date:
+          time_stamp: "タイムスタンプ"
+          start_date: "宿泊日"
+        datetime: {}
     facilities:
       kinokuniya:
         facility_code: 1
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/1FdH6YPiB4zkaZV1ApkJ_3PjNfQp8oNeiTqkr6mWxQ7U/edit?gid=29
-        mapping: default
+        spreadsheet:
+          id: 1FdH6YPiB4zkaZV1ApkJ_3PjNfQp8oNeiTqkr6mWxQ7U
       kino-hanare:
         facility_code: 2
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/1dEgzFpZZmvyPdKuABuqtsgaPCaqHy7NfuKIWAE4jlok/edit?gid=214
-        mapping: default
+        spreadsheet:
+          id: 1dEgzFpZZmvyPdKuABuqtsgaPCaqHy7NfuKIWAE4jlok
       kino-bettei:
         facility_code: 3
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/1QnGZ-rO3oepz2HcQfEdXTTcrzwpXBYOnbhv7b5eRtcU/edit?gid=1592
-        mapping: default
+        spreadsheet:
+          id: 1QnGZ-rO3oepz2HcQfEdXTTcrzwpXBYOnbhv7b5eRtcU
       oyadohiruta:
         facility_code: 4
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/1Wt_DspBEIf85j2XQnX9YLuydiJJcw9SAW2hFzUJD0L0/edit?gid=9210667
-        mapping: default
+        spreadsheet:
+          id: 1Wt_DspBEIf85j2XQnX9YLuydiJJcw9SAW2hFzUJD0L0
       yuumi:
         facility_code: 5
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/11DRwIFNB8q91AR5gbPS69jd4KRfmse84yNyheDvOwvI/edit?gid=1418122348
-        mapping: default
+        spreadsheet:
+          id: 11DRwIFNB8q91AR5gbPS69jd4KRfmse84yNyheDvOwvI
       sazane:
         facility_code: 6
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/1QGPIN9mbbfNpJVacKrOwIt_40YgUOZKK5zlJn2vFJ6M/edit?gid=172988882
-        mapping: default
+        spreadsheet:
+          id: 1QGPIN9mbbfNpJVacKrOwIt_40YgUOZKK5zlJn2vFJ6M
       amane:
         facility_code: 7
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/1XZUp__vp6AnS1J5f_xPj1WEpgbEMmOxhkZyGgYtAPGs/edit?gid=1227145091
-        mapping: default
+        spreadsheet:
+          id: 1XZUp__vp6AnS1J5f_xPj1WEpgbEMmOxhkZyGgYtAPGs
       danqoo:
         facility_code: 8
-        spreadsheet_url:
-        mapping: default
+        spreadsheet:
+          id: 
       misasa:
         facility_code: 9
-        spreadsheet_url: https://docs.google.com/spreadsheets/d/1KGT9f802GgsxCFgLhKd1-8jG9hqmfmYf8MMlFZJdZJk/edit?resourcekey=&gid=1341281595
-        mapping: default
+        spreadsheet:
+          id: 1KGT9f802GgsxCFgLhKd1-8jG9hqmfmYf8MMlFZJdZJk

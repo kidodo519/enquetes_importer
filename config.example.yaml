@@ -1,0 +1,76 @@
+csv:
+  encoding: Shift_JIS
+
+google:
+  worksheet: "フォームの回答 1"
+
+mappings:
+  # 任意。全法人で共有するマッピングを定義したい場合に利用します。
+  shared_default:
+    string: {}
+    text: {}
+    integer: {}
+    date: {}
+    datetime: {}
+
+corporations:
+  sample_corp:
+    db:
+      host: db.example.com
+      port: 5432
+      user: importer
+      password: changeme
+      database: sample_corp_db
+    mappings:
+      default:
+        string:
+          room_number: "部屋番号"
+          repeat: "来館頻度"
+        text:
+          impression: "ご意見・ご感想"
+        integer: {}
+        date:
+          start_date: "宿泊日"
+        datetime:
+          time_stamp: "タイムスタンプ"
+      seasonal:
+        string:
+          room_number: "部屋番号"
+        text:
+          impression: "その他自由記入欄"
+        integer: {}
+        date:
+          start_date: "ご利用日"
+        datetime: {}
+    facilities:
+      main_hotel:
+        facility_code: 1
+        spreadsheet:
+          id: 1AbCdEfGhIjKlMnOpQrStUvWxYz0123456789abcde
+          worksheet: "フォームの回答 1"
+        mappings:
+          default:
+            string:
+              room_number: "お部屋番号"
+            text:
+              impression: "自由記入欄"
+            integer: {}
+            date:
+              start_date: "宿泊日"
+            datetime:
+              time_stamp: "タイムスタンプ"
+          campaign:
+            string:
+              room_number: "部屋番号"
+            text:
+              impression: "アンケート自由記入"
+            integer: {}
+            date:
+              start_date: "滞在日"
+            datetime: {}
+        mapping: campaign
+      annex:
+        facility_code: 2
+        spreadsheet:
+          id: 1ZyXwVuTsRqPoNmLkJiHgFeDcBa9876543210fedcb
+        # mapping を省略すると施設 default → 法人 default → 全体 default の順に利用されます

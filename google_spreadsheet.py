@@ -3,7 +3,7 @@ import os
 from argparse import ArgumentParser
 from copy import deepcopy
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Set
+from typing import Any, Dict, Iterable, List, Optional, Set
 
 import gspread
 import jaconv
@@ -75,6 +75,10 @@ def normalize_cell_value(value: Any) -> str:
     return str(value).strip()
 
 
+def normalize_header_name(value: Any) -> str:
+    return normalize_cell_value(value)
+
+
 def replace_invalid_shiftjis_chars(value: str, replace_with: str = "?") -> str:
     return "".join(
         char if char.encode("shift_jis", errors="ignore") else replace_with for char in value
@@ -107,7 +111,9 @@ def normalize_mapping(mapping: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
         value = mapping.get(section) or {}
         if not isinstance(value, dict):
             raise TypeError(f"Mapping section '{section}' must be a dictionary.")
-        normalized[section] = dict(value)
+        normalized[section] = {
+            db_key: normalize_header_name(csv_key) for db_key, csv_key in value.items()
+        }
     return normalized
 
 
@@ -197,23 +203,46 @@ def build_generated_fields(
     }
 
 
+def sanitize_mapping_reference(reference: Any) -> Any:
+    if isinstance(reference, str):
+        reference = reference.strip()
+        if not reference:
+            return None
+    return reference
+
+
+def normalize_optional_string(value: Any) -> Optional[str]:
+    if value is None:
+        return None
+    if isinstance(value, str):
+        normalized = value.strip()
+        return normalized or None
+    normalized = str(value).strip()
+    return normalized or None
+
+
 def open_worksheet(
     client: gspread.Client,
     facility_config: Dict[str, Any],
     default_worksheet: Optional[str],
 ):
-    spreadsheet_id = facility_config.get("spreadsheet_id")
-    spreadsheet_url = facility_config.get("spreadsheet_url")
 
-    if not spreadsheet_id and not spreadsheet_url:
-        raise ValueError("Either 'spreadsheet_id' or 'spreadsheet_url' must be provided.")
+    spreadsheet_config = facility_config.get("spreadsheet") or {}
+    spreadsheet_id = normalize_optional_string(
+        spreadsheet_config.get("id") or facility_config.get("spreadsheet_id")
+    )
 
-    if spreadsheet_id:
-        workbook = client.open_by_key(spreadsheet_id)
-    else:
-        workbook = client.open_by_url(spreadsheet_url)
+    if not spreadsheet_id:
+        raise ValueError("'spreadsheet.id' is required in each facility configuration.")
 
-    worksheet_name = facility_config.get("worksheet", default_worksheet)
+    workbook = client.open_by_key(spreadsheet_id)
+
+    worksheet_name = normalize_optional_string(
+        spreadsheet_config.get("worksheet") or facility_config.get("worksheet")
+    )
+    if not worksheet_name:
+        worksheet_name = default_worksheet
+
     if worksheet_name:
         return workbook.worksheet(worksheet_name)
 
@@ -233,6 +262,51 @@ def facility_selected(
     return facility in filters or build_facility_filter(corporation, facility) in filters
 
 
+def build_header_index(headers: Iterable[Any]) -> Dict[str, int]:
+    index: Dict[str, int] = {}
+    for position, header in enumerate(headers):
+        normalized = normalize_header_name(header)
+        if not normalized or normalized in index:
+            continue
+        index[normalized] = position
+    return index
+
+
+def extract_required_headers(mapping: Dict[str, Dict[str, str]]) -> Set[str]:
+    headers: Set[str] = set()
+    for section in ("string", "text", "integer", "date", "datetime"):
+        headers.update(mapping[section].values())
+    return headers
+
+
+def read_records(
+    worksheet: gspread.Worksheet, required_headers: Set[str]
+) -> List[Dict[str, Any]]:
+    rows = worksheet.get_all_values()
+    if not rows:
+        return []
+
+    header_index = build_header_index(rows[0])
+    missing = sorted(required_headers - set(header_index))
+    if missing:
+        raise ValueError(
+            "Missing required header(s) in worksheet: " + ", ".join(missing)
+        )
+
+    records: List[Dict[str, Any]] = []
+    for raw_row in rows[1:]:
+        if not any(normalize_cell_value(cell) for cell in raw_row):
+            continue
+
+        record: Dict[str, Any] = {}
+        for header in required_headers:
+            index = header_index[header]
+            record[header] = raw_row[index] if index < len(raw_row) else ""
+        records.append(record)
+
+    return records
+
+
 def import_facility(
     connection: psycopg2.extensions.connection,
     cursor: psycopg2.extensions.cursor,
@@ -240,7 +314,8 @@ def import_facility(
     corporation: str,
     facility_name: str,
     facility_config: Dict[str, Any],
-    mappings: Dict[str, Any],
+    corporation_config: Dict[str, Any],
+    base_mappings: Dict[str, Any],
     default_worksheet: Optional[str],
     table_name: str,
 ) -> None:
@@ -248,9 +323,24 @@ def import_facility(
         raise ValueError("'facility_code' is required in each facility configuration.")
 
     facility_code = facility_config["facility_code"]
-    mapping = resolve_mapping(mappings, facility_config.get("mapping"))
+
+    available_mappings: Dict[str, Any] = dict(base_mappings)
+    available_mappings.update(corporation_config.get("mappings", {}) or {})
+
+    facility_mappings = facility_config.get("mappings", {}) or {}
+    available_mappings.update(facility_mappings)
+
+    mapping_reference = sanitize_mapping_reference(facility_config.get("mapping"))
+    if mapping_reference is None:
+        mapping_reference = sanitize_mapping_reference(
+            corporation_config.get("mapping")
+        )
+
+    mapping = resolve_mapping(available_mappings, mapping_reference)
+
     worksheet = open_worksheet(client, facility_config, default_worksheet)
-    records = worksheet.get_all_records()
+    records = read_records(worksheet, extract_required_headers(mapping))
+
 
     logger.info(
         "Fetched %d rows from %s/%s", len(records), corporation, facility_name
@@ -329,7 +419,9 @@ def main() -> None:
             )
 
     client = create_gspread_client(base_path)
-    default_worksheet = config.get("google", {}).get("worksheet")
+    default_worksheet = normalize_optional_string(
+        (config.get("google", {}) or {}).get("worksheet")
+    )
 
     for corporation, corporation_config in corporations.items():
         if selected_corporations and corporation not in selected_corporations:
@@ -364,6 +456,7 @@ def main() -> None:
                             corporation,
                             facility_name,
                             facility_config,
+                            corporation_config,
                             mappings,
                             default_worksheet,
                             args.table,
