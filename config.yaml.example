@@ -1,0 +1,284 @@
+# Example configuration for the Salesforce exporter.
+
+s3_info:
+  bucket_name: onsen-jasper-importer-prod-data-xxxxx
+  access_key_id: 'xxxxxxxx'
+  secret_access_key: 'xxxxxxx'
+  file_name: 'pms-reservations/あらや滔々庵_'
+
+csv:
+  output_directory: data/tmp
+  archive_directory: data/archive
+  encoding: shift_jis
+
+salesforce:
+  username: your-salesforce-username
+  password: your-salesforce-password
+  # security_token can be omitted or left blank when IP restrictions make it unnecessary
+  security_token: your-salesforce-security-token
+  domain: login  # or 'test' for sandbox
+
+# Timezone used for timestamped file names and incremental windows
+timezone: Asia/Tokyo
+
+queries:
+  - name: Reservations_history
+    soql: |
+      SELECT Id,
+      ps__No__c,
+      ps__EntryTime__c,
+      ps__ReservedDate__c,
+      ps__ReservedStatus__c,
+      ps__PmsEmailDelDateTime__c,
+      ps__StayPersons__c,
+      ps__ChildFA__c,
+      ps__email__c,
+      ps__Field2__c,
+      LastModifiedDate,
+      ps__Field310__c,
+      ps__Relcontact__c,
+      ps__Rroom__c
+      FROM ps__Lead__c
+    where: "DAY_ONLY(ps__EntryTime__c) = N_DAYS_AGO:2"
+    output_file: reservations_history
+    write_output: false
+
+  - name: Reservations_onhand
+    soql: |
+      SELECT Id,
+      ps__No__c,
+      ps__EntryTime__c,
+      ps__ReservedDate__c,
+      ps__ReservedStatus__c,
+      ps__PmsEmailDelDateTime__c,
+      ps__StayPersons__c,
+      ps__ChildFA__c,
+      ps__email__c,
+      ps__Field2__c,
+      LastModifiedDate,
+      ps__Field310__c,
+      ps__Relcontact__c,
+      ps__Rroom__c
+      FROM ps__Lead__c
+    where: |
+      DAY_ONLY(ps__EntryTime__c) >= N_DAYS_AGO:1
+      AND DAY_ONLY(ps__EntryTime__c) <= NEXT_N_DAYS:363
+    output_file: reservations_onhand
+    write_output: false
+
+  - name: Contact_history
+    soql: |
+      SELECT Id,
+      MailingAddress,
+      Field6__c,
+      Name,
+      Phone,
+      Email,
+      HasOptedOutOfEmail
+      FROM Contact
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_history
+        source_field: ps__Relcontact__c
+        target_field: Id
+    output_file: contacts_history
+    write_output: false
+
+  - name: Contact_onhand
+    soql: |
+      SELECT Id,
+      MailingAddress,
+      Field6__c,
+      Name,
+      Phone,
+      Email,
+      HasOptedOutOfEmail
+      FROM Contact
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_onhand
+        source_field: ps__Relcontact__c
+        target_field: Id
+    output_file: contacts_onhand
+    write_output: false
+
+  - name: AccountAcount_history
+    soql: |
+      SELECT Id,
+      ps__Relreserve__c
+      FROM ps__AccountAcount__c
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_history
+        source_field: Id
+        target_field: ps__Relreserve__c
+    output_file: accountacount_history
+    write_output: false
+
+  - name: AccountAcount_onhand
+    soql: |
+      SELECT Id,
+      ps__Relreserve__c
+      FROM ps__AccountAcount__c
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_onhand
+        source_field: Id
+        target_field: ps__Relreserve__c
+    output_file: accountacount_onhand
+    write_output: false
+
+  - name: Sales_history
+    soql: |
+      SELECT Id,
+      ps__Field5__c,
+      ps__Field23__c,
+      ps__TaxRate__c,
+      ps__Field21__c,
+      LastModifiedDate,
+      ps__Field1__c,
+      ps__Field7__c
+      FROM ps__Tran1__c
+    incremental: false
+    relationship_filters:
+      - source_query: AccountAcount_history
+        source_field: Id
+        target_field: ps__Field1__c
+    output_file: sales_history
+    write_output: false
+
+  - name: Sales_onhand
+    soql: |
+      SELECT Id,
+      ps__Field5__c,
+      ps__Field23__c,
+      ps__TaxRate__c,
+      ps__Field21__c,
+      LastModifiedDate,
+      ps__Field1__c,
+      ps__Field7__c
+      FROM ps__Tran1__c
+    incremental: false
+    relationship_filters:
+      - source_query: AccountAcount_onhand
+        source_field: Id
+        target_field: ps__Field1__c
+    output_file: sales_onhand
+    write_output: false
+
+  - name: Room_history
+    soql: |
+      SELECT Id,
+      Name,
+      ps__UseOfRoom__c,
+      ps__TypeRoomRef__c
+      FROM ps__Room__c
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_history
+        source_field: ps__Rroom__c
+        target_field: Id
+    output_file: rooms_history
+
+  - name: Room_onhand
+    soql: |
+      SELECT Id,
+      Name,
+      ps__UseOfRoom__c,
+      ps__TypeRoomRef__c
+      FROM ps__Room__c
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_onhand
+        source_field: ps__Rroom__c
+        target_field: Id
+    output_file: rooms_onhand
+
+  - name: AccountMaster
+    soql: |
+      SELECT Id,
+      Name,
+      ps__ActionType__c
+      FROM ps__AccountMaster__c
+    incremental: false
+    output_file: accountmaster
+    write_output: false
+
+  - name: Plan
+    soql: |
+      SELECT Id,
+      Name
+      FROM ps__Plan__c
+    incremental: false
+    output_file: plan
+    write_output: false
+
+  - name: TypeOfRooms
+    soql: |
+      SELECT Id,
+      Name,
+      ps__ActionType__c
+      FROM ps__TypeOfRooms__c
+    incremental: false
+    output_file: roomtype
+
+combined_outputs:
+  - name: Reservations_history_combined
+    base_query: Reservations_history
+    output_file: reservations_history
+    joins:
+      - source_query: Contact_history
+        left_on: ps__Relcontact__c
+        right_on: Id
+        how: left
+      - source_query: Plan
+        left_on: ps__Field310__c
+        right_on: Id
+        how: left
+
+  - name: Reservations_onhand_combined
+    base_query: Reservations_onhand
+    output_file: reservations_onhand
+    joins:
+      - source_query: Contact_onhand
+        left_on: ps__Relcontact__c
+        right_on: Id
+        how: left
+      - source_query: Plan
+        left_on: ps__Field310__c
+        right_on: Id
+        how: left
+
+  - name: Sales_history_combined
+    base_query: Sales_history
+    output_file: sales_history
+    joins:
+      - source_query: AccountAcount_history
+        left_on: ps__Field1__c
+        right_on: Id
+        how: left
+      - source_query: Reservations_history
+        left_on: ps__Relreserve__c
+        right_on: Id
+        how: left
+      - source_query: AccountMaster
+        left_on: ps__Field7__c
+        right_on: Id
+        how: left
+
+  - name: Sales_onhand_combined
+    base_query: Sales_onhand
+    output_file: sales_onhand
+    joins:
+      - source_query: AccountAcount_onhand
+        left_on: ps__Field1__c
+        right_on: Id
+        how: left
+      - source_query: Reservations_onhand
+        left_on: ps__Relreserve__c
+        right_on: Id
+        how: left
+      - source_query: AccountMaster
+        left_on: ps__Field7__c
+        right_on: Id
+        how: left

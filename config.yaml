@@ -1,470 +1,321 @@
+s3_info:
+  bucket_name: onsen-jasper-importer-prod-data-arayatotoan
+  access_key_id: 'xxxx'
+  secret_access_key: 'xxxx'
+  file_name: 'pms-reservations/あらや滔々庵_'
+
 csv:
-  encoding: Shift_JIS
+  output_directory: data/tmp
+  archive_directory: data/archive
+  encoding: utf-8
 
-google:
-  worksheet: "フォームの回答 1"
+salesforce:
+  username: 001@araya-totoan.com
+  password: xxxx
+  security_token:
+  domain: login  # or 'test' for sandbox
 
-corporations:
-  kinokuniya:
-    db:
-      host: incrazetech-app-db-prod.app-prod.incrazetech.dev
-      port: 5432
-      user: user_kinokuniya_insert
-      password: h3fsdxmkbekq
-      database: reservation_db_kinokuniya
-    mappings:
-      default:
-        string:
-          room_number: "部屋番号"
-          repeat: "来館頻度"
-          how_to_know: "当館を知ったきっかけ"
-          tel_qual: "電話対応の質"
-          dinner_taste: "夕食の内容について　味"
-          dinner_sat: "夕食の内容について　満足度"
-          dinner_vol: "夕食の内容について　ボリューム"
-          dinner_menu: "夕食の内容について　献立"
-          dinner_pace: "夕食の内容について　食事の提供ペース"
-          morning_taste: "朝食の内容について　味"
-          morning_sat: "朝食の内容について　満足度"
-          morning_vol: "朝食の内容について　ボリューム"
-          morning_menu: "朝食の内容について　献立"
-          room_clean: "お部屋の清潔状況"
-          bath_clean: "お風呂の清掃状況"
-          facility_clean: "館内全体の清掃状況"
-          staff_service: "スタッフのサービス全般について"
-          price_eval: "料金設定はいかがでしたでしょうか"
-          repeat_request: "もう一度利用したいと思いますか？"
-        text:
-          dinner_text: "夕食の内容について　自由記入欄"
-          best_dish: "献立の中で一番美味しかった料理"
-          add_dish: "献立に加えて欲しい料理"
-          morning_text: "朝食の内容について　自由記入欄"
-          impression: "その他自由記入欄"
-        integer: {}
-        date:
-          time_stamp: "タイムスタンプ"
-          start_date: "宿泊日"
-        datetime: {}
-    facilities:
-      kinokuniya:
-        facility_code: 1
-        spreadsheet:
-          id: 1FdH6YPiB4zkaZV1ApkJ_3PjNfQp8oNeiTqkr6mWxQ7U
-      kino-hanare:
-        facility_code: 2
-        spreadsheet:
-          id: 1dEgzFpZZmvyPdKuABuqtsgaPCaqHy7NfuKIWAE4jlok
-      kino-bettei:
-        facility_code: 3
-        spreadsheet:
-          id: 1QnGZ-rO3oepz2HcQfEdXTTcrzwpXBYOnbhv7b5eRtcU
-      oyadohiruta:
-        facility_code: 4
-        spreadsheet:
-          id: 1Wt_DspBEIf85j2XQnX9YLuydiJJcw9SAW2hFzUJD0L0
-      yuumi:
-        facility_code: 5
-        spreadsheet:
-          id: 11DRwIFNB8q91AR5gbPS69jd4KRfmse84yNyheDvOwvI
-      sazane:
-        facility_code: 6
-        spreadsheet:
-          id: 1QGPIN9mbbfNpJVacKrOwIt_40YgUOZKK5zlJn2vFJ6M
-      amane:
-        facility_code: 7
-        spreadsheet:
-          id: 1XZUp__vp6AnS1J5f_xPj1WEpgbEMmOxhkZyGgYtAPGs
-      danqoo:
-        facility_code: 8
-        spreadsheet:
-          id: 
-      misasa:
-        facility_code: 9
-        spreadsheet:
-          id: 1KGT9f802GgsxCFgLhKd1-8jG9hqmfmYf8MMlFZJdZJk
+# Timezone used for timestamped file names and incremental windows
+timezone: Asia/Tokyo
 
+queries:
+  - name: Reservations_history
+    soql: |
+      SELECT Id,
+      ps__No__c,
+      ps__EntryTime__c,
+      ps__ReservedDate__c,
+      ps__ReservedStatus__c,
+      ps__PmsEmailDelDateTime__c,
+      ps__StayPersons__c,
+      ps__ChildFA__c,
+      ps__email__c,
+      ps__Field2__c,
+      LastModifiedDate,
+      ps__Field310__c,
+      ps__Relcontact__c,
+      ps__Rroom__c
+      FROM ps__Lead__c
+    where: "DAY_ONLY(ps__EntryTime__c) = N_DAYS_AGO:2"
+    output_file: reservations_history
+    write_output: false
 
-  a_and_c:
-    db:
-      host: incrazetech-app-db-prod.app-prod.incrazetech.dev
-      port: 5432
-      user: user_a_and_c_insert
-      password: pmzidg2n4h3q
-      database: reservation_db_a_and_c
-    mappings:
-      japanese:
-        string:
-          staff_service: "サービススタッフについて [接客態度]"
-          staff_explanation: "サービススタッフについて [館内説明]"
-          staff_meal: "サービススタッフについて [食事提供]"
-          staff_order: "サービススタッフについて [ご用命]"
-          bath1: "お風呂について［１］ [快適度]"
-          dinner_taste: "夕食について［１］ [味]"
-          dinner_looks: "夕食について［１］ [見た目]"
-          dinner_dish: "夕食について［１］ [器]"
-          morning_taste: "朝食について［１］ [味]"
-          morning_looks: "朝食について［１］ [見た目]"
-          morning_dish: "朝食について［１］ [器]"
-          room_cleaning: "お部屋について [清掃・清潔感]"
-          room_facility: "お部屋について [設備・環境]"
-          room_amenities: "お部屋について [アメニティ・備品]"
-          repeat_request: "また宿泊したいと感じていただけましたか？"
-          dm_availability: "DM可否"
-          mail: "メールアドレス"
-          how_to_know: "当館をどのようにして知りましたか？"    
-        text:
-          impression: "ご意見・ご要望・ご感想"
-          bath2: "お風呂について［2］"
-          dinner2: "夕食について［２］"
-          morning2: "朝食について［２］"
-          guest_name: "お名前"
-          address: "ご住所"
-        integer:
-          recommend_possibility: "当館を友人や同僚に薦める可能性は、どのくらいありますか？"
-          room_number: "お部屋番号"
-        integer2:
-          comprehensive_evaluation: "総合評価"   
-        date:
-          time_stamp: "タイムスタンプ"
-          start_date: "ご宿泊日"    
-        datetime: {}
-      english:    
-        string1:
-          staff_service: "About our service staff [Customer service attitude]"
-          staff_explanation: "About our service staff [Explanation of Roka facility inside]"
-          staff_service: "About our service staff [Customer service attitude]"
-          staff_explanation: "About our service staff [Explanation of Roka facility inside]"
-          staff_meal: "About our service staff [How the food was served by the staff.]"
-          staff_order: "About our service staff [The attitude of the staff when you request]"
-          bath1: "About guest room open-air bath [Comfort level]"
-          dinner_taste: "About dinner [1] [Taste]"
-          dinner_looks: "About dinner [1] [Arrangement and presentation]"
-          dinner_dish: "About dinner [1] [Tableware]"
-          morning_taste: "About breakfast [1] [Taste]"
-          morning_looks: "About breakfast [1] [Arrangement and presentation]"
-          morning_dish: "About breakfast [1] [Tableware]"
-          room_cleaning: "About guest rooms [Cleanliness and sanitation]"
-          room_facility: "About guest rooms [Facilities and environment ]"
-          room_amenities: "About guest rooms [Amenities]" 
-        string2:
-          repeat_request: "Did you feel that you would like to stay again?"
-          dm_availability: "Would you mind if we send you a direct mail?" 
-        string3:
-          how_to_know: "How did you come to know about Roka?"        
-        text:
-          impression: "Requests and Feedbacks"
-          dinner2: "About dinner [2]"
-          morning2: "About breakfast [2]"
-          guest_name: "Your name"
-          address: "Your address"
-          mail: "Your Email"
-        integer:
-          recommend_possibility: "How likely are you to recommend our hotel to a friend or colleague?"
-          room_number: "Room number"
-        integer2:
-          comprehensive_evaluation: "Comprehensive evaluation"        
-        date:
-          time_stamp: "タイムスタンプ"
-          start_date: "Date of your stay"        
-        datetime: {}
-      conversion1:
-        Very Good: "非常に良い"
-        Good: "良い"
-        Average: "普通"
-        Poor: "悪い"
-        Very Poor: "非常に悪い"
-      conversion2:
-        "Yes": "はい"
-        "No": "いいえ"
-    facilities:
-      kifunosato:
-        facility_code: 1
-        spreadsheet:
-          id: 1IFtVvUa72G-CVe1iSid3_t0mllDQoeIflyLKme8GTmg
-      roka-japanese:
-        facility_code: 2
-        spreadsheet:
-          id: 1aVhUCbttqfQZ-NnNp8ltI6Iy_MGSpgrgML0nO_nRyzs
-      roka-english:
-        facility_code: 2
-        spreadsheet:
-          id: 13_9WWRWfUKVYo6gBW5basvCTh7I8Q2OLaK2bJT3SSUA
+  - name: Reservations_onhand
+    soql: |
+      SELECT Id,
+      ps__No__c,
+      ps__EntryTime__c,
+      ps__ReservedDate__c,
+      ps__ReservedStatus__c,
+      ps__PmsEmailDelDateTime__c,
+      ps__StayPersons__c,
+      ps__ChildFA__c,
+      ps__email__c,
+      ps__Field2__c,
+      LastModifiedDate,
+      ps__Field310__c,
+      ps__Relcontact__c,
+      ps__Rroom__c
+      FROM ps__Lead__c
+    where: |
+      DAY_ONLY(ps__EntryTime__c) >= N_DAYS_AGO:1
+      AND DAY_ONLY(ps__EntryTime__c) <= NEXT_N_DAYS:363
+    output_file: reservations_onhand
+    write_output: false
 
+  - name: Contact_history
+    soql: |
+      SELECT Id,
+      MailingState,
+      MailingCity,
+      MailingStreet,
+      Field6__c,
+      Name,
+      MobilePhone,
+      Phone,
+      Email,
+      HasOptedOutOfEmail
+      FROM Contact
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_history
+        source_field: ps__Relcontact__c
+        target_field: Id
+    output_file: contacts_history
+    write_output: false
 
-  ginzansou:
-    db:
-      host: incrazetech-app-db-prod.app-prod.incrazetech.dev
-      port: 5432
-      user: user_ginzansou_insert
-      password: xnaehzhptbz2
-      database: reservation_db_ginzansou
-    mappings:
-      string:
-        staff_service: "サービススタッフについて [接客態度]"
-        staff_explanation: "サービススタッフについて [館内説明]"
-        staff_meal: "サービススタッフについて [食事提供]"
-        staff_order: "サービススタッフについて [ご用命]"
-        bath1: "お風呂について［１］ [快適度]"
-        dinner_taste: "夕食について［１］ [味]"
-        dinner_looks: "夕食について［１］ [見た目]"
-        dinner_dish: "夕食について［１］ [器]"
-        morning_taste: "朝食について［１］ [味]"
-        morning_looks: "朝食について［１］ [見た目]"
-        morning_dish: "朝食について［１］ [器]"
-        room_cleaning: "お部屋について [清掃・清潔感]"
-        room_facility: "お部屋について [設備・環境]"
-        room_amenities: "お部屋について [アメニティ・備品]"
-        repeat_request: "また宿泊したいと感じていただけましたか？"
-        dm_availability: "DM可否"
-        mail: "メールアドレス"
-        how_to_know: "当館をどのようにして知りましたか？"    
-      text:
-        impression: "ご意見・ご要望・ご感想"
-        bath2: "お風呂について［2］"
-        dinner2: "夕食について［２］"
-        morning2: "朝食について［２］"
-        guest_name: "お名前"
-        address: "ご住所"
-      integer:
-        recommend_possibility: "当館を友人や同僚に薦める可能性は、どのくらいありますか？"
-        room_number: "お部屋番号"
-      integer2:
-        comprehensive_evaluation: "総合評価"   
-      date:
-        time_stamp: "タイムスタンプ"
-        start_date: "ご宿泊日"    
-      datetime: {}
-    facilities:
-      ginzansou:
-        facility_code: 1
-        spreadsheet:
-          id: 1Z0JsuEwCjVYkD18n-fm4KDd1GLF93ghWPRBtP_QJr1w
+  - name: Contact_onhand
+    soql: |
+      SELECT Id,
+      MailingAddress,
+      Field6__c,
+      Name,
+      Phone,
+      Email,
+      HasOptedOutOfEmail
+      FROM Contact
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_onhand
+        source_field: ps__Relcontact__c
+        target_field: Id
+    output_file: contacts_onhand
+    write_output: false
 
+  - name: AccountAcount_history
+    soql: |
+      SELECT Id,
+      ps__Relreserve__c
+      FROM ps__AccountAcount__c
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_history
+        source_field: Id
+        target_field: ps__Relreserve__c
+    output_file: accountacount_history
+    write_output: false
 
-  hachinobo:
-    db:
-      host: incrazetech-app-db-prod.app-prod.incrazetech.dev
-      port: 5432
-      user: user_hachinobo_insert
-      password: aawhdxxbh9nx
-      database: reservation_db_hachinobo
-    mappings:
-      enquetes:
-        string:
-          dinner: "ご夕食"
-          morning: "ご朝食"
-          front_clerk: "フロント係"
-          room_clerk: "客室係"
-          room: "お部屋"
-          room_bath: "お部屋浴場"
-          amenities: "アメニティ"
-          dogs_amenities: "ワンちゃん備品"
-          bed: "ベッド・お布団"
-          bath: "大浴場"
-          room_number: "お部屋番号"
-          guest_name: "お名前"
-          mail: "メールアドレス"
-          dm_availability: "DM送付可否"          
-        date:
-          start_date: "宿泊日"
-      enquetes_text:
-        string:
-          room_number: "部屋番号"
-          guest_name: "名前"
-          enquete_text: "アンケート結果"
-          solution_text: "備考"
-          support: "対応"
-        date:
-          start_date: "日付"
-    facilities:
-      hachinobo:
-        facility_code: 1
-        spreadsheet:
-          id: 1fqPnxI-7YirT726GlqCyQgoERAuvggmCCQBP9ZJY-5s
+  - name: AccountAcount_onhand
+    soql: |
+      SELECT Id,
+      ps__Relreserve__c
+      FROM ps__AccountAcount__c
+    incremental: false
+    relationship_filters:
+      - source_query: Reservations_onhand
+        source_field: Id
+        target_field: ps__Relreserve__c
+    output_file: accountacount_onhand
+    write_output: false
 
+  - name: Sales_history
+    soql: |
+      SELECT Id,
+      ps__Field5__c,
+      ps__Field23__c,
+      ps__TaxRate__c,
+      ps__Field21__c,
+      LastModifiedDate,
+      ps__Field1__c,
+      ps__Field7__c
+      FROM ps__Tran1__c
+    incremental: false
+    relationship_filters:
+      - source_query: AccountAcount_history
+        source_field: Id
+        target_field: ps__Field1__c
+    output_file: sales_history
+    write_output: false
 
-  kanon:
-    db:
-      host: incrazetech-app-db-prod.app-prod.incrazetech.dev
-      port: 5432
-      user: user_kanon_insert
-      password: njdgubzb259e
-      database: reservation_db_kanon
-    mappings:
-      kureha:
-        string:
-          guest_name: "お名前"
-          mail: "メールアドレス"
-          reservation_staff_service: "予約係について [接客対応]"
-          front_staff_checkin: "フロント係について [チェックイン時]"
-          front_staff_stay: "フロント係について [ご滞在中]"
-          room_staff_explanation: "お部屋係について [館内説明]"
-          room_staff_order: "お部屋係について [ご用命時の対応]"
-          room_cleaning: "お部屋について [清掃・清潔感]"
-          room_facility: "お部屋について [設備・環境]"
-          room_amenities: "お部屋について [アメニティ・備品]"
-          bath1: "お風呂について [1階：ジャグジー風呂]"
-          bath2: "お風呂について [2階：露天風呂]"
-          dinner_taste: "ご夕食について［１］ [お味]"
-          dinner_looks: "ご夕食について［１］ [器・盛り付け]"
-          dinner_order: "ご夕食について［１］ [食事提供]"
-          dinner_service: "ご夕食について［１］ [接客態度]"
-          morning_taste: "ご朝食について［１］ [お味]"
-          morning_looks: "ご朝食について［１］ [器・盛り付け]"
-          facility_restaurant: "館内について [レストラン]"
-          repeat_request: "また泊まりたいと思いますか？"
-          dm_availability: "DM可否"
-        string2:
-          room_number: "お部屋番号"
-        text:
-          address: "ご住所"
-          dinner_text: "ご夕食について［２］"
-          morning_text: "ご朝食について［２］"
-          total_impression: "全体的な印象について"
-          impression: "ご意見・ご要望・ご感想"        
-        integer:
-          {}
-        integer2:
-          comprehensive_evaluation: "総合評価"        
-        date:
-          time_stamp: "タイムスタンプ"
-          start_date: "ご宿泊日"
-      kanon:
-        string:
-          room_number: "部屋名"        
-        string2:
-          {}
-        text:
-          impression: "アンケート結果"
-        integer:
-          facility_code: "施設"
-        integer2:
-          {}
-        date:
-          start_date: "宿泊日"
-    facilities:
-      kanon:
-        facility_code: 3
-        spreadsheet:
-          id: 1LbQx7Wa_MXFbHbR3iFotuonSqc8KdEexbVXWG9xSWuY
+  - name: Sales_onhand
+    soql: |
+      SELECT Id,
+      ps__Field5__c,
+      ps__Field23__c,
+      ps__TaxRate__c,
+      ps__Field21__c,
+      LastModifiedDate,
+      ps__Field1__c,
+      ps__Field7__c
+      FROM ps__Tran1__c
+    incremental: false
+    relationship_filters:
+      - source_query: AccountAcount_onhand
+        source_field: Id
+        target_field: ps__Field1__c
+    output_file: sales_onhand
+    write_output: false
+  
+  - name: Rooms_history
+    soql: |
+      SELECT Id,
+      ps__No__c,
+      ps__EntryTime__c,
+      ps__Rroom__c
+      FROM ps__Lead__c
+    where: "DAY_ONLY(ps__EntryTime__c) = N_DAYS_AGO:2"
+    output_file: rooms_history
+    write_output: false
 
+  - name: Rooms_onhand
+    soql: |
+      SELECT Id,
+      ps__No__c,
+      ps__EntryTime__c,
+      ps__Rroom__c
+      FROM ps__Lead__c
+    where: |
+      DAY_ONLY(ps__EntryTime__c) >= N_DAYS_AGO:1
+      AND DAY_ONLY(ps__EntryTime__c) <= NEXT_N_DAYS:363
+    output_file: rooms_onhand
+    write_output: false
 
-  sunshine:
-    db:
-      host: incrazetech-app-db-prod.app-prod.incrazetech.dev
-      port: 5432
-      user: user_sunshine_insert
-      password: wkiffaidc3r8
-      database: reservation_db_sunshine
-    mappings:
-      string:
-        address: "ご住所"
-        dinner_text: "ご夕食について［２］"
-        morning_text: "ご朝食について［２］"
-        mail: "メールアドレス"
-        guest_name: "お名前"
-        reservation_staff: "予約係について [接客対応]"
-        front_staff_checkin: "フロント係について [チェックイン時]"
-        front_staff_stay: "フロント係について [ご滞在中]"
-        front_staff_checkout: "フロント係について [チェックアウト時]"
-        room_staff_service: "お部屋係について [接客態度]"
-        room_staff_explanation: "お部屋係について [館内説明]"
-        room_staff_order: "お部屋係について [ご用命時の対応]"
-        room_cleaning: "お部屋について [清掃・清潔感]"
-        room_facility: "お部屋について [設備・環境]"
-        room_amenities: "お部屋について [アメニティ・備品]"
-        bath_dressroom: "お風呂について [脱衣所]"
-        bath_communal: "お風呂について [大浴場]"
-        bath_openair: "お風呂について [露天風呂]"
-        dinner_taste: "ご夕食について［１］ [お味]"
-        dinner_dish: "ご夕食について［１］ [器・盛り付け]"
-        dinner_provide: "ご夕食について［１］ [食事提供]"
-        dinner_service: "ご夕食について［１］ [接客態度]"
-        morning_taste: "ご朝食について［１］ [お味]"
-        morning_dish: "ご朝食について［１］ [器・盛り付け]"
-        morning_provide: "ご朝食について［１］ [食事提供]"
-        morning_service: "ご朝食について［１］ [接客態度]"
-        facility_lounge: "館内について [ラウンジ]"
-        store_service: "売店について［１］ [接客態度]"
-        store_lineup: "売店について［１］ [品揃え]"
-        store_total: "売店について［２］"
-        repeat_request: "また泊まりたいと思いますか？"
-        dm_availability: "DM可否"
-      text:
-        impression: "全体的な印象について"
-        opinion: "ご意見・ご要望・ご感想"
-      integer:
-        room_number: "お部屋番号"
-      integer2:
-        comprehensive_evaluation: "総合評価"      
-      date:
-        time_stamp: "タイムスタンプ"
-        start_date: "ご宿泊日" 
-      datetime: {}
-    facilities:
-      sunshine:
-        facility_code: 1
-        spreadsheet:
-          id: 1Unhpwunch9ZF-B8evH4Nt8VtsizVsWh1r4E90OKzDIs
-      tsuganoki:
-        facility_code: 2
-        spreadsheet:
-          id: 1mNsgvtu7OPWC0AYxPwycawByly0K_RLs6Tl08Tx8Plk
+  - name: Rooms
+    soql: |
+      SELECT Id,
+      Name,
+      ps__UseOfRoom__c,
+      ps__TypeRoomRef__c,
+      ps__priority__c,
+      ps__Floor__c
+      FROM ps__Room__c
+    incremental: false
+    output_file: room_type
+    write_output: false
 
+  - name: AccountMaster
+    soql: |
+      SELECT Id,
+      Name,
+      ps__ActionType__c
+      FROM ps__AccountMaster__c
+    incremental: false
+    output_file: accountmaster
+    write_output: false
 
-  tachibanaya:
-    db:
-      host: incrazetech-app-db-prod.app-prod.incrazetech.dev
-      port: 5432
-      user: user_tachibanaya_insert
-      password: f4gva2ba9ifs
-      database: reservation_db_tachibanaya
-    mappings:
-      string:
-        mail: "メールアドレス"
-        room_number: "お部屋番号"
-        reservation_clerk: "予約係について [接客対応]"
-        front_clerk_checkin: "フロント係について [チェックイン時]"
-        front_clerk_stay: "フロント係について [ご滞在中]"
-        front_clerk_checkout: "フロント係について [チェックアウト時]"
-        room_clerk_service: "お部屋係について [接客態度]"
-        room_clerk_facility: "お部屋係について [館内説明]"
-        room_clerk_order: "お部屋係について [ご用命時の対応]"
-        room_cleaning: "お部屋について [清掃・清潔感]"
-        room_facility: "お部屋について [設備・環境]"
-        room_amenities: "お部屋について [アメニティ・備品]"
-        bath_dressing: "お風呂について [脱衣所]"
-        bath_main: "お風呂について [大浴場]"
-        bath_open_air: "お風呂について [露天風呂]"
-        dinner_taste: "ご夕食について［１］ [お味]"
-        dinner_dish: "ご夕食について［１］ [器・盛り付け]"
-        dinner_provision: "ご夕食について［１］ [食事提供]"
-        dinner_service: "ご夕食について［１］ [接客態度]"
-        morning_taste: "ご朝食について［１］ [お味]"
-        morning_dish: "ご朝食について［１］ [器・盛り付け]"
-        morning_provision: "ご朝食について［１］ [食事提供]"
-        morning_service: "ご朝食について［１］ [接客態度]"
-        facility_lounge: "館内について [ラウンジ]"
-        facility_garden: "館内について [庭園]"
-        stand_service: "売店について［１］ [接客態度]"
-        stand_assortment: "売店について［１］ [品揃え]"
-        stand2: "売店について［２］"
-        repeat_request: "また泊まりたいと思いますか？"
-        dm_availability: "DM可否"
-      text:
-        dinner_text: "ご夕食について［２］"
-        morning_text: "ご朝食について［２］"
-        total_impression: "全体的な印象について"
-        impression: "ご意見・ご要望・ご感想"
-      integer2:
-        comprehensive_evaluation: "総合評価"      
-      date:
-        time_stamp: "タイムスタンプ"
-        start_date: "ご宿泊日"      
-      datetime: {}
-    facilities:
-      tachibanaya:
-        facility_code: 1
-        spreadsheet:
-          id: 19T306cKkFUPgZv84-QnnGZwwhn22hZrCinGt9zORzb4
+  - name: Plan
+    soql: |
+      SELECT Id,
+      Name
+      FROM ps__Plan__c
+    incremental: false
+    output_file: plan
+    write_output: false
+    
+  - name: TypeOfRooms
+    soql: |
+      SELECT Id,
+      Name,
+      ps__ActionType__c
+      FROM ps__TypeOfRooms__c
+    incremental: false
+    output_file: roomtype
+    write_output: false
 
+combined_outputs:
+  - name: Reservations_history_combined
+    base_query: Reservations_history
+    output_file: reservations_history
+    joins:
+      - source_query: Contact_history
+        left_on: ps__Relcontact__c
+        right_on: Id
+        how: left
+      - source_query: Plan
+        left_on: ps__Field310__c
+        right_on: Id
+        how: left
+
+  - name: Reservations_onhand_combined
+    base_query: Reservations_onhand
+    output_file: reservations_onhand
+    joins:
+      - source_query: Contact_onhand
+        left_on: ps__Relcontact__c
+        right_on: Id
+        how: left
+      - source_query: Plan
+        left_on: ps__Field310__c
+        right_on: Id
+        how: left
+
+  - name: Sales_history_combined
+    base_query: Sales_history
+    output_file: sales_history
+    joins:
+      - source_query: AccountAcount_history
+        left_on: ps__Field1__c
+        right_on: Id
+        how: left
+      - source_query: Reservations_history
+        left_on: ps__Relreserve__c
+        right_on: Id
+        how: left
+      - source_query: AccountMaster
+        left_on: ps__Field7__c
+        right_on: Id
+        how: left
+
+  - name: Sales_onhand_combined
+    base_query: Sales_onhand
+    output_file: sales_onhand
+    joins:
+      - source_query: AccountAcount_onhand
+        left_on: ps__Field1__c
+        right_on: Id
+        how: left
+      - source_query: Reservations_onhand
+        left_on: ps__Relreserve__c
+        right_on: Id
+        how: left
+      - source_query: AccountMaster
+        left_on: ps__Field7__c
+        right_on: Id
+        how: left
+
+  - name: Rooms_history_combined
+    base_query: Rooms_history
+    output_file: rooms_history
+    joins:
+      - source_query: Rooms
+        left_on: ps__Rroom__c
+        right_on: Id
+        how: left
+
+  - name: Rooms_onhand_combined
+    base_query: Rooms_onhand
+    output_file: rooms_onhand
+    joins:
+      - source_query: Rooms
+        left_on: ps__Rroom__c
+        right_on: Id
+        how: left
+
+  - name: Room_type_combined
+    base_query: Rooms
+    output_file: room_type
+    joins:
+      - source_query: TypeOfRooms
+        left_on: ps__TypeRoomRef__c
+        right_on: Id
+        how: left

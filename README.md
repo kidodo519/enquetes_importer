@@ -1,85 +1,76 @@
-# Enquêtes Importer
+# Salesforce Exporter
 
-このリポジトリには、Google スプレッドシートに蓄積されたアンケート回答を施設ごとのデータベースへ取り込むためのスクリプトが含まれています。
+Salesforce から複数のオブジェクトを取得し、CSV 形式に変換して Amazon S3 へアップロードするバッチです。設定ファイルで SOQL・増分抽出条件・S3 などを管理します。
 
-## 必要なファイル
+## 変更点の概要
 
-- `client_secret.json` – Google サービスアカウントの認証情報。
-- `config.yaml` – インポート対象の法人・施設・マッピング定義などの設定ファイル。
+リポジトリに含まれる主なコンポーネントと役割は次の通りです。どのファイルが何を担っているかを把握しやすいように、構成を一覧化しました。
 
-各ファイルはリポジトリ直下に配置します。
+| ファイル / ディレクトリ | 役割 |
+| --- | --- |
+| `main.py` | 設定ファイルを読み込み、エクスポート処理を起動するエントリーポイントです。 |
+| `salesforce_exporter/config.py` | YAML 設定をデータクラスに読み込み、増分条件の計算や検証を行います。 |
+| `salesforce_exporter/exporter.py` | Salesforce から SOQL を実行し、CSV 出力・S3 アップロードをまとめて処理します。 |
+| `salesforce_exporter/s3_uploader.py` | S3 へのアップロードや成功後のアーカイブ処理を担います。 |
+| `config.yaml.example` | 実際に編集する `config.yaml` のサンプルです。 |
+| `requirements.txt` | 必要な Python ライブラリをまとめています。 |
 
-## 設定ファイルの構成
 
-`config.yaml` の構造は以下の通りです。実際の記述例は [`config.example.yaml`](./config.example.yaml) を参照してください。
+## 必要環境
 
-```yaml
-google:
-  worksheet: "フォームの回答 1"   # ワークシート名を省略した場合の既定値
+- Python 3.10 以降
+- `pip install -r requirements.txt`
 
-corporations:
-  <corporation-key>:
-    db:
-      host: ...
-      port: 5432
-      user: ...
-      password: ...
-      database: ...
-    mappings:
-      default:                 # 法人で共有するマッピング定義
-        string:
-          <column-key>: <header name>
-        text: {}
-        integer: {}
-        date: {}
-        datetime: {}
-    facilities:
-      <facility-key>:
-        facility_code: 1        # データベースに登録済みの施設コード
-        spreadsheet:
-          id: <spreadsheet id>
-          worksheet: <optional worksheet name>
-        mappings:               # 任意。施設固有のマッピングカタログ
-          default:
-            ...
-        mapping: <mapping key>  # 任意。省略または空欄なら施設→法人→全体の順で default を利用
-```
+## 使い方
 
-### マッピングの優先順位
-
-1. 施設設定の `mapping` キーで指定したカタログ（空欄の場合は次の優先順位へ）。
-2. 施設の `mappings` 内にある `default`。施設側で `default` を定義していない場合は法人の `default` を利用します。
-3. 法人の `mapping` キー、または `mappings` 内の `default`。
-4. ルートに定義した `mappings`（必要に応じてグローバルで共有する場合）。
-
-### ワークシートの選択
-
-- 施設設定の `spreadsheet.worksheet` に名前を指定すると、そのワークシートを読み込みます。
-- `spreadsheet.worksheet` が空欄または未指定の場合は、`config.yaml` の `google.worksheet` で定義した既定値を使用します。
-- いずれも指定されていない場合は、スプレッドシートの先頭ワークシートが使用されます。
-
-## 実行方法
-
-1. 仮想環境などで依存関係（`gspread`, `psycopg2`, `oauth2client`, `python-dateutil`, `jaconv`, `PyYAML`）をインストールします。
-2. `config.yaml` と `client_secret.json` を配置します。
-3. 以下のコマンドでインポートを実行します。
+1. `config.yaml.example` をコピーして `config.yaml` を作成します。
+2. S3・Salesforce の認証情報、出力先ディレクトリ、SOQL を設定します。
+3. 実行します。
 
 ```bash
-python google_spreadsheet.py \
-  --corporation kinokuniya \
-  --facility kinokuniya \
-  --table enquetes
+python main.py --config config.yaml
 ```
 
-- `--corporation`、`--facility` は複数指定（`--facility corp.facility` 形式を含む）できます。省略すると全施設が対象です。
-- `--table` を指定しない場合は `enquetes` テーブルへ書き込みます。
+`--verbose` を付与するとデバッグログを出力します。
 
-## トラブルシューティング
+## 設定
 
-- **ヘッダーが見つからないエラーが出る場合**: `config.yaml` のマッピングで指定したヘッダー名がワークシートと一致しているか確認してください。全角・半角・スペースの差異は正規化されません。
-- **シフト JIS で保存できない文字**: 自由記述欄などに含まれる一部の文字は `?` に置き換えられます。置換文字は `google_spreadsheet.py` の `replace_invalid_shiftjis_chars` 関数で変更できます。
+設定ファイルは YAML 形式です。主要な項目は以下の通りです。
 
-## その他
+- `s3_info`
+  - `bucket_name`、`access_key_id`、`secret_access_key` はアップロード先の S3 情報です。
+  - `file_name` は S3 オブジェクトキーのプレフィックスです。CSV ファイル名が連結されます。
+- `csv`
+  - `output_directory` は CSV を一時的に保存するローカルディレクトリです。
+  - `archive_directory` を指定するとアップロード成功後にファイルを移動します。
+  - `encoding` を指定すると CSV の文字コードを変更できます。既定値は `utf-8` で、`shift_jis` を指定すると SJIS で書き出します。
+- `salesforce` は接続情報です。`domain` に `test` を指定すると Sandbox に接続します。`security_token` を空文字もしくは省略
+  すると、IP 制限でトークン不要な環境としてログインします。
+- `timezone` はファイル名や日付条件を計算する際のタイムゾーンです。
+- `incremental`
+  - `field` は増分取得の基準となる最終更新日などの列名です。
+  - `where_template` は WHERE 句のテンプレートで、`{field}`、`{start_iso}`、`{end_iso}` などを利用できます。
+  - `window_days` は取得期間の長さ、`end_offset_days` は「現在時刻から何日前まで」を表します。既定では「昨日の同時刻までの 24 時間分」を抽出します。
+- `queries` 配列
+  - `name` はクエリの識別子です。
+  - `soql` は WHERE 句を除いた SOQL を記載します。テンプレートで生成した WHERE 句が自動的に付与されます。手動で `where` を指定するとその条件を使用します。
+  - `output_file` を指定すると CSV ファイル名に利用されます。
+  - `write_output` を `false` にすると SOQL は実行しますが CSV を生成せず、後続クエリや結合用に結果のみをキャッシュします。
+  - `incremental` をクエリ単位で指定すると、増分取得の設定を上書きまたは無効化できます。`false` を指定すると常に全件出力、マップ形式で `field` や `window_days` を設定するとその値を使用します。
+  - `relationship_filters` を指定すると、先に実行したクエリの結果から ID を収集して `IN` 条件を自動生成できます。`source_query`（参照元クエリ名）、`source_field`（参照元の列名）、`target_field`（対象クエリでフィルタする列名）を設定すると、取得した ID を `target_field IN (...)` 形式で追加します。ID が多い場合に備えて `chunk_size`（既定値 200）で分割し、複数回に分けて SOQL を実行します。
 
-- 施設ごとのマッピング変更は `config.yaml` の `facilities.<facility-key>.mappings` に定義し、`mapping` キーで利用するカタログを選択します。
-- 既定値の取り扱いは施設 → 法人 → 全体の順にフォールバックするため、必要最小限の設定で運用できます。
+- `combined_outputs` 配列
+  - `name` は結合結果の識別子、`base_query` は結合の起点となるクエリ名です。
+  - `joins` で複数の結合定義を並べると、順番に `pandas.merge` を実行して列を取り込みます。`left_on`／`right_on` で結合キー（単一または配列）を指定し、`suffixes` で重複カラム名に付くサフィックスを制御できます（省略時は `("", "_<source_query>")`）。
+  - `output_file` を指定すると生成される CSV のファイル名になります。省略時は `name` が使用されます。
+  - サンプル設定では `Reservations_*` と `Sales_*` の元データに関連オブジェクト（`Contact`、`Plan`、`AccountAcount`、`AccountMaster`）
+    を順番に結合し、最終的な CSV を 7 ファイルにまとめています。
+
+
+## ファイル出力と S3 アップロード
+
+各 SOQL の結果を CSV に出力し、`s3_info.file_name` のプレフィックスと組み合わせて S3 にアップロードします。アップロード成功後に `archive_directory` が設定されている場合はそのディレクトリへファイルを移動します。
+
+## テスト
+
+実際の Salesforce・S3 へは接続せず、設定ファイルの検証とコード整形のみを実施しています。

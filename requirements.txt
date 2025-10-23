@@ -1,0 +1,4 @@
+boto3>=1.28.0
+pandas>=2.0.0
+PyYAML>=6.0
+simple-salesforce>=1.12.0
