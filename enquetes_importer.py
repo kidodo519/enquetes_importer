@@ -359,6 +359,7 @@ def import_facility(
     corporation_config: Dict[str, Any],
     base_mappings: Dict[str, Any],
     default_worksheet: Optional[str],
+    deleted_facility_codes: Set[Any],
     table_name: str,
 ) -> None:
     if "facility_code" not in facility_config:
@@ -419,31 +420,40 @@ def import_facility(
             delete_keys.add(enquete_key)
         buffer.append([record.get(key) for key in ordered_keys])
 
-    if delete_strategy == "enquete_keys":
-        if delete_keys:
+    if facility_code not in deleted_facility_codes:
+        if delete_strategy == "enquete_keys":
+            if delete_keys:
+                cursor.execute(
+                    f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key = ANY(%s)",
+                    (facility_code, list(delete_keys)),
+                )
+            else:
+                logger.info(
+                    "Skipping deletion for %s/%s because no enquete keys were generated.",
+                    corporation,
+                    facility_name,
+                )
+        elif delete_strategy == "enquete_key_prefix":
+            prefix = enquete_key_prefix
+            if not prefix:
+                raise ValueError(
+                    "delete_strategy 'enquete_key_prefix' requires 'enquete_key_prefix' to be set"
+                )
             cursor.execute(
-                f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key = ANY(%s)",
-                (facility_code, list(delete_keys)),
+                f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key LIKE %s",
+                (facility_code, f"{prefix}%"),
             )
         else:
-            logger.info(
-                "Skipping deletion for %s/%s because no enquete keys were generated.",
-                corporation,
-                facility_name,
+            cursor.execute(
+                f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
             )
-    elif delete_strategy == "enquete_key_prefix":
-        prefix = enquete_key_prefix
-        if not prefix:
-            raise ValueError(
-                "delete_strategy 'enquete_key_prefix' requires 'enquete_key_prefix' to be set"
-            )
-        cursor.execute(
-            f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key LIKE %s",
-            (facility_code, f"{prefix}%"),
-        )
+        deleted_facility_codes.add(facility_code)
     else:
-        cursor.execute(
-            f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
+        logger.info(
+            "Skipping deletion for %s/%s because facility_code %s was already processed.",
+            corporation,
+            facility_name,
+            facility_code,
         )
 
     if not buffer:
@@ -528,6 +538,7 @@ def main() -> None:
 
         connection = psycopg2.connect(**db_config)
         try:
+            deleted_facility_codes: Set[Any] = set()
             for facility_name, facility_config in facilities.items():
                 if not facility_selected(corporation, facility_name, facility_filters):
                     continue
@@ -546,6 +557,7 @@ def main() -> None:
                             corporation_config,
                             mappings,
                             default_worksheet,
+                            deleted_facility_codes,
                             args.table,
                         )
                 except ValueError as exc:
