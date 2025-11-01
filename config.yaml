@@ -95,7 +95,6 @@ corporations:
         spreadsheet:
           id: xxxxx
         mapping: japanese
-        delete_strategy: enquete_keys
         enquete_key_suffix: ja
       roka_english:
         facility_code: 2
@@ -103,7 +102,6 @@ corporations:
         spreadsheet:
           id: xxxxx
         mapping: english
-        delete_strategy: enquete_keys
         enquete_key_suffix: en
 
   tachibanaya:
