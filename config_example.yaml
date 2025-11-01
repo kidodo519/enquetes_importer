@@ -32,7 +32,7 @@ corporations:
           repeat_request: "また宿泊したいと感じていただけましたか？"
           dm_availability: "DM可否"
           mail: "メールアドレス"
-          how_to_know: "当館をどのようにして知りましたか？"    
+          how_to_know: "当館をどのようにして知りましたか？"
         text:
           impression: "ご意見・ご要望・ご感想"
           bath2: "お風呂について［2］"
@@ -43,16 +43,13 @@ corporations:
         integer:
           recommend_possibility: "当館を友人や同僚に薦める可能性は、どのくらいありますか？"
           room_number: "お部屋番号"
-        integer2:
-          comprehensive_evaluation: "総合評価"   
+          comprehensive_evaluation: "総合評価"
         date:
           time_stamp: "タイムスタンプ"
-          start_date: "ご宿泊日"    
+          start_date: "ご宿泊日"
         datetime: {}
-      english:    
-        string1:
-          staff_service: "About our service staff [Customer service attitude]"
-          staff_explanation: "About our service staff [Explanation of Roka facility inside]"
+      english:
+        string:
           staff_service: "About our service staff [Customer service attitude]"
           staff_explanation: "About our service staff [Explanation of Roka facility inside]"
           staff_meal: "About our service staff [How the food was served by the staff.]"
@@ -66,12 +63,10 @@ corporations:
           morning_dish: "About breakfast [1] [Tableware]"
           room_cleaning: "About guest rooms [Cleanliness and sanitation]"
           room_facility: "About guest rooms [Facilities and environment ]"
-          room_amenities: "About guest rooms [Amenities]" 
-        string2:
+          room_amenities: "About guest rooms [Amenities]"
           repeat_request: "Did you feel that you would like to stay again?"
-          dm_availability: "Would you mind if we send you a direct mail?" 
-        string3:
-          how_to_know: "How did you come to know about Roka?"        
+          dm_availability: "Would you mind if we send you a direct mail?"
+          how_to_know: "How did you come to know about Roka?"
         text:
           impression: "Requests and Feedbacks"
           dinner2: "About dinner [2]"
@@ -82,35 +77,31 @@ corporations:
         integer:
           recommend_possibility: "How likely are you to recommend our hotel to a friend or colleague?"
           room_number: "Room number"
-        integer2:
-          comprehensive_evaluation: "Comprehensive evaluation"        
+          comprehensive_evaluation: "Comprehensive evaluation"
         date:
           time_stamp: "タイムスタンプ"
-          start_date: "Date of your stay"        
+          start_date: "Date of your stay"
         datetime: {}
-      conversion1:
-        Very Good: "非常に良い"
-        Good: "良い"
-        Average: "普通"
-        Poor: "悪い"
-        Very Poor: "非常に悪い"
-      conversion2:
-        "Yes": "はい"
-        "No": "いいえ"
     facilities:
       kifunosato:
         facility_code: 1
         spreadsheet:
           id: xxxxx
-      roka-japanese:
+        mapping: japanese
+      roka_japanese:
         facility_code: 2
         spreadsheet:
           id: xxxxx
-      roka-english:
+        mapping: japanese
+        delete_strategy: enquete_keys
+        enquete_key_suffix: ja
+      roka_english:
         facility_code: 2
         spreadsheet:
           id: xxxxx
-
+        mapping: english
+        delete_strategy: enquete_keys
+        enquete_key_suffix: en
 
   tachibanaya:
     db:
@@ -120,54 +111,55 @@ corporations:
       password: xxxxx
       database: reservation_db_tachibanaya
     mappings:
-      string:
-        mail: "メールアドレス"
-        room_number: "お部屋番号"
-        reservation_clerk: "予約係について [接客対応]"
-        front_clerk_checkin: "フロント係について [チェックイン時]"
-        front_clerk_stay: "フロント係について [ご滞在中]"
-        front_clerk_checkout: "フロント係について [チェックアウト時]"
-        room_clerk_service: "お部屋係について [接客態度]"
-        room_clerk_facility: "お部屋係について [館内説明]"
-        room_clerk_order: "お部屋係について [ご用命時の対応]"
-        room_cleaning: "お部屋について [清掃・清潔感]"
-        room_facility: "お部屋について [設備・環境]"
-        room_amenities: "お部屋について [アメニティ・備品]"
-        bath_dressing: "お風呂について [脱衣所]"
-        bath_main: "お風呂について [大浴場]"
-        bath_open_air: "お風呂について [露天風呂]"
-        dinner_taste: "ご夕食について［１］ [お味]"
-        dinner_dish: "ご夕食について［１］ [器・盛り付け]"
-        dinner_provision: "ご夕食について［１］ [食事提供]"
-        dinner_service: "ご夕食について［１］ [接客態度]"
-        morning_taste: "ご朝食について［１］ [お味]"
-        morning_dish: "ご朝食について［１］ [器・盛り付け]"
-        morning_provision: "ご朝食について［１］ [食事提供]"
-        morning_service: "ご朝食について［１］ [接客態度]"
-        facility_lounge: "館内について [ラウンジ]"
-        facility_garden: "館内について [庭園]"
-        stand_service: "売店について［１］ [接客態度]"
-        stand_assortment: "売店について［１］ [品揃え]"
-        stand2: "売店について［２］"
-        repeat_request: "また泊まりたいと思いますか？"
-        dm_availability: "DM可否"
-      text:
-        dinner_text: "ご夕食について［２］"
-        morning_text: "ご朝食について［２］"
-        total_impression: "全体的な印象について"
-        impression: "ご意見・ご要望・ご感想"
-      integer2:
-        comprehensive_evaluation: "総合評価"      
-      date:
-        time_stamp: "タイムスタンプ"
-        start_date: "ご宿泊日"      
-      datetime: {}
+      default:
+        string:
+          mail: "メールアドレス"
+          room_number: "お部屋番号"
+          reservation_clerk: "予約係について [接客対応]"
+          front_clerk_checkin: "フロント係について [チェックイン時]"
+          front_clerk_stay: "フロント係について [ご滞在中]"
+          front_clerk_checkout: "フロント係について [チェックアウト時]"
+          room_clerk_service: "お部屋係について [接客態度]"
+          room_clerk_facility: "お部屋係について [館内説明]"
+          room_clerk_order: "お部屋係について [ご用命時の対応]"
+          room_cleaning: "お部屋について [清掃・清潔感]"
+          room_facility: "お部屋について [設備・環境]"
+          room_amenities: "お部屋について [アメニティ・備品]"
+          bath_dressing: "お風呂について [脱衣所]"
+          bath_main: "お風呂について [大浴場]"
+          bath_open_air: "お風呂について [露天風呂]"
+          dinner_taste: "ご夕食について［１］ [お味]"
+          dinner_dish: "ご夕食について［１］ [器・盛り付け]"
+          dinner_provision: "ご夕食について［１］ [食事提供]"
+          dinner_service: "ご夕食について［１］ [接客態度]"
+          morning_taste: "ご朝食について［１］ [お味]"
+          morning_dish: "ご朝食について［１］ [器・盛り付け]"
+          morning_provision: "ご朝食について［１］ [食事提供]"
+          morning_service: "ご朝食について［１］ [接客態度]"
+          facility_lounge: "館内について [ラウンジ]"
+          facility_garden: "館内について [庭園]"
+          stand_service: "売店について［１］ [接客態度]"
+          stand_assortment: "売店について［１］ [品揃え]"
+          stand2: "売店について［２］"
+          repeat_request: "また泊まりたいと思いますか？"
+          dm_availability: "DM可否"
+        text:
+          dinner_text: "ご夕食について［２］"
+          morning_text: "ご朝食について［２］"
+          total_impression: "全体的な印象について"
+          impression: "ご意見・ご要望・ご感想"
+        integer:
+          comprehensive_evaluation: "総合評価"
+        date:
+          time_stamp: "タイムスタンプ"
+          start_date: "ご宿泊日"
+        datetime: {}
     facilities:
       tachibanaya:
         facility_code: 1
         spreadsheet:
           id: xxxxx
-
+        mapping: default
 
   ginzansou:
     db:
@@ -177,47 +169,47 @@ corporations:
       password: xxxxx
       database: reservation_db_ginzansou
     mappings:
-      string:
-        staff_service: "サービススタッフについて [接客態度]"
-        staff_explanation: "サービススタッフについて [館内説明]"
-        staff_meal: "サービススタッフについて [食事提供]"
-        staff_order: "サービススタッフについて [ご用命]"
-        bath1: "お風呂について［１］ [快適度]"
-        dinner_taste: "夕食について［１］ [味]"
-        dinner_looks: "夕食について［１］ [見た目]"
-        dinner_dish: "夕食について［１］ [器]"
-        morning_taste: "朝食について［１］ [味]"
-        morning_looks: "朝食について［１］ [見た目]"
-        morning_dish: "朝食について［１］ [器]"
-        room_cleaning: "お部屋について [清掃・清潔感]"
-        room_facility: "お部屋について [設備・環境]"
-        room_amenities: "お部屋について [アメニティ・備品]"
-        repeat_request: "また宿泊したいと感じていただけましたか？"
-        dm_availability: "DM可否"
-        mail: "メールアドレス"
-        how_to_know: "当館をどのようにして知りましたか？"    
-      text:
-        impression: "ご意見・ご要望・ご感想"
-        bath2: "お風呂について［2］"
-        dinner2: "夕食について［２］"
-        morning2: "朝食について［２］"
-        guest_name: "お名前"
-        address: "ご住所"
-      integer:
-        recommend_possibility: "当館を友人や同僚に薦める可能性は、どのくらいありますか？"
-        room_number: "お部屋番号"
-      integer2:
-        comprehensive_evaluation: "総合評価"   
-      date:
-        time_stamp: "タイムスタンプ"
-        start_date: "ご宿泊日"    
-      datetime: {}
+      default:
+        string:
+          staff_service: "サービススタッフについて [接客態度]"
+          staff_explanation: "サービススタッフについて [館内説明]"
+          staff_meal: "サービススタッフについて [食事提供]"
+          staff_order: "サービススタッフについて [ご用命]"
+          bath1: "お風呂について［１］ [快適度]"
+          dinner_taste: "夕食について［１］ [味]"
+          dinner_looks: "夕食について［１］ [見た目]"
+          dinner_dish: "夕食について［１］ [器]"
+          morning_taste: "朝食について［１］ [味]"
+          morning_looks: "朝食について［１］ [見た目]"
+          morning_dish: "朝食について［１］ [器]"
+          room_cleaning: "お部屋について [清掃・清潔感]"
+          room_facility: "お部屋について [設備・環境]"
+          room_amenities: "お部屋について [アメニティ・備品]"
+          repeat_request: "また宿泊したいと感じていただけましたか？"
+          dm_availability: "DM可否"
+          mail: "メールアドレス"
+          how_to_know: "当館をどのようにして知りましたか？"
+        text:
+          impression: "ご意見・ご要望・ご感想"
+          bath2: "お風呂について［2］"
+          dinner2: "夕食について［２］"
+          morning2: "朝食について［２］"
+          guest_name: "お名前"
+          address: "ご住所"
+        integer:
+          recommend_possibility: "当館を友人や同僚に薦める可能性は、どのくらいありますか？"
+          room_number: "お部屋番号"
+          comprehensive_evaluation: "総合評価"
+        date:
+          time_stamp: "タイムスタンプ"
+          start_date: "ご宿泊日"
+        datetime: {}
     facilities:
       ginzansou:
         facility_code: 1
         spreadsheet:
           id: xxxxx
-
+        mapping: default
 
   sunshine:
     db:
@@ -227,60 +219,61 @@ corporations:
       password: xxxxx
       database: reservation_db_sunshine
     mappings:
-      string:
-        address: "ご住所"
-        dinner_text: "ご夕食について［２］"
-        morning_text: "ご朝食について［２］"
-        mail: "メールアドレス"
-        guest_name: "お名前"
-        reservation_staff: "予約係について [接客対応]"
-        front_staff_checkin: "フロント係について [チェックイン時]"
-        front_staff_stay: "フロント係について [ご滞在中]"
-        front_staff_checkout: "フロント係について [チェックアウト時]"
-        room_staff_service: "お部屋係について [接客態度]"
-        room_staff_explanation: "お部屋係について [館内説明]"
-        room_staff_order: "お部屋係について [ご用命時の対応]"
-        room_cleaning: "お部屋について [清掃・清潔感]"
-        room_facility: "お部屋について [設備・環境]"
-        room_amenities: "お部屋について [アメニティ・備品]"
-        bath_dressroom: "お風呂について [脱衣所]"
-        bath_communal: "お風呂について [大浴場]"
-        bath_openair: "お風呂について [露天風呂]"
-        dinner_taste: "ご夕食について［１］ [お味]"
-        dinner_dish: "ご夕食について［１］ [器・盛り付け]"
-        dinner_provide: "ご夕食について［１］ [食事提供]"
-        dinner_service: "ご夕食について［１］ [接客態度]"
-        morning_taste: "ご朝食について［１］ [お味]"
-        morning_dish: "ご朝食について［１］ [器・盛り付け]"
-        morning_provide: "ご朝食について［１］ [食事提供]"
-        morning_service: "ご朝食について［１］ [接客態度]"
-        facility_lounge: "館内について [ラウンジ]"
-        store_service: "売店について［１］ [接客態度]"
-        store_lineup: "売店について［１］ [品揃え]"
-        store_total: "売店について［２］"
-        repeat_request: "また泊まりたいと思いますか？"
-        dm_availability: "DM可否"
-      text:
-        impression: "全体的な印象について"
-        opinion: "ご意見・ご要望・ご感想"
-      integer:
-        room_number: "お部屋番号"
-      integer2:
-        comprehensive_evaluation: "総合評価"      
-      date:
-        time_stamp: "タイムスタンプ"
-        start_date: "ご宿泊日" 
-      datetime: {}
+      default:
+        string:
+          address: "ご住所"
+          dinner_text: "ご夕食について［２］"
+          morning_text: "ご朝食について［２］"
+          mail: "メールアドレス"
+          guest_name: "お名前"
+          reservation_staff: "予約係について [接客対応]"
+          front_staff_checkin: "フロント係について [チェックイン時]"
+          front_staff_stay: "フロント係について [ご滞在中]"
+          front_staff_checkout: "フロント係について [チェックアウト時]"
+          room_staff_service: "お部屋係について [接客態度]"
+          room_staff_explanation: "お部屋係について [館内説明]"
+          room_staff_order: "お部屋係について [ご用命時の対応]"
+          room_cleaning: "お部屋について [清掃・清潔感]"
+          room_facility: "お部屋について [設備・環境]"
+          room_amenities: "お部屋について [アメニティ・備品]"
+          bath_dressroom: "お風呂について [脱衣所]"
+          bath_communal: "お風呂について [大浴場]"
+          bath_openair: "お風呂について [露天風呂]"
+          dinner_taste: "ご夕食について［１］ [お味]"
+          dinner_dish: "ご夕食について［１］ [器・盛り付け]"
+          dinner_provide: "ご夕食について［１］ [食事提供]"
+          dinner_service: "ご夕食について［１］ [接客態度]"
+          morning_taste: "ご朝食について［１］ [お味]"
+          morning_dish: "ご朝食について［１］ [器・盛り付け]"
+          morning_provide: "ご朝食について［１］ [食事提供]"
+          morning_service: "ご朝食について［１］ [接客態度]"
+          facility_lounge: "館内について [ラウンジ]"
+          store_service: "売店について［１］ [接客態度]"
+          store_lineup: "売店について［１］ [品揃え]"
+          store_total: "売店について［２］"
+          repeat_request: "また泊まりたいと思いますか？"
+          dm_availability: "DM可否"
+        text:
+          impression: "全体的な印象について"
+          opinion: "ご意見・ご要望・ご感想"
+        integer:
+          room_number: "お部屋番号"
+          comprehensive_evaluation: "総合評価"
+        date:
+          time_stamp: "タイムスタンプ"
+          start_date: "ご宿泊日"
+        datetime: {}
     facilities:
       sunshine:
         facility_code: 1
         spreadsheet:
           id: xxxxx
+        mapping: default
       tsuganoki:
         facility_code: 2
         spreadsheet:
           id: xxxxx
-
+        mapping: default
 
   hachinobo:
     db:
@@ -298,16 +291,20 @@ corporations:
           room_clerk: "客室係"
           room: "お部屋"
           room_bath: "お部屋浴場"
-          amenities: "アメニティ"
+          amenities: "アメニテ"
           dogs_amenities: "ワンちゃん備品"
           bed: "ベッド・お布団"
           bath: "大浴場"
           room_number: "お部屋番号"
           guest_name: "お名前"
           mail: "メールアドレス"
-          dm_availability: "DM送付可否"          
+          dm_availability: "DM送付可否"
+        text: {}
+        integer: {}
         date:
           start_date: "宿泊日"
+          time_stamp: "タイムスタンプ"
+        datetime: {}
       enquetes_text:
         string:
           room_number: "部屋番号"
@@ -315,14 +312,18 @@ corporations:
           enquete_text: "アンケート結果"
           solution_text: "備考"
           support: "対応"
+        text: {}
+        integer: {}
         date:
           start_date: "日付"
+          time_stamp: "タイムスタンプ"
+        datetime: {}
     facilities:
       hachinobo:
         facility_code: 1
         spreadsheet:
           id: xxxxx
-
+        mapping: enquetes
 
   kanon:
     db:
@@ -355,40 +356,36 @@ corporations:
           facility_restaurant: "館内について [レストラン]"
           repeat_request: "また泊まりたいと思いますか？"
           dm_availability: "DM可否"
-        string2:
           room_number: "お部屋番号"
         text:
           address: "ご住所"
           dinner_text: "ご夕食について［２］"
           morning_text: "ご朝食について［２］"
           total_impression: "全体的な印象について"
-          impression: "ご意見・ご要望・ご感想"        
+          impression: "ご意見・ご要望・ご感想"
         integer:
-          {}
-        integer2:
-          comprehensive_evaluation: "総合評価"        
+          comprehensive_evaluation: "総合評価"
         date:
           time_stamp: "タイムスタンプ"
           start_date: "ご宿泊日"
+        datetime: {}
       kanon:
         string:
-          room_number: "部屋名"        
-        string2:
-          {}
-        text:
+          room_number: "部屋名"
           impression: "アンケート結果"
+        text: {}
         integer:
           facility_code: "施設"
-        integer2:
-          {}
         date:
           start_date: "宿泊日"
+          time_stamp: "タイムスタンプ"
+        datetime: {}
     facilities:
       kanon:
         facility_code: 3
         spreadsheet:
           id: xxxxx
-
+        mapping: kureha
 
   kinokuniya:
     db:
@@ -435,36 +432,44 @@ corporations:
         facility_code: 1
         spreadsheet:
           id: xxxxx
-      kino-hanare:
+        mapping: default
+      kino_hanare:
         facility_code: 2
         spreadsheet:
           id: xxxxx
-      kino-bettei:
+        mapping: default
+      kino_bettei:
         facility_code: 3
         spreadsheet:
           id: xxxxx
+        mapping: default
       oyadohiruta:
         facility_code: 4
         spreadsheet:
           id: xxxxx
+        mapping: default
       yuumi:
         facility_code: 5
         spreadsheet:
           id: xxxxx
+        mapping: default
       sazane:
         facility_code: 6
         spreadsheet:
           id: xxxxx
+        mapping: default
       amane:
         facility_code: 7
         spreadsheet:
           id: xxxxx
+        mapping: default
       danqoo:
         facility_code: 8
         spreadsheet:
           id: xxxxx
+        mapping: default
       misasa:
         facility_code: 9
         spreadsheet:
           id: xxxxx
-
+        mapping: default
