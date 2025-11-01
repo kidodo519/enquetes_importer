@@ -359,6 +359,7 @@ def import_facility(
     corporation_config: Dict[str, Any],
     base_mappings: Dict[str, Any],
     default_worksheet: Optional[str],
+    deleted_facility_codes: Set[Any],
     table_name: str,
 ) -> None:
     if "facility_code" not in facility_config:
@@ -501,6 +502,7 @@ def main() -> None:
 
         connection = psycopg2.connect(**db_config)
         try:
+            deleted_facility_codes: Set[Any] = set()
             for facility_name, facility_config in facilities.items():
                 if not facility_selected(corporation, facility_name, facility_filters):
                     continue
@@ -519,6 +521,7 @@ def main() -> None:
                             corporation_config,
                             mappings,
                             default_worksheet,
+                            deleted_facility_codes,
                             args.table,
                         )
                 except ValueError as exc:
