@@ -22,6 +22,20 @@ DEFAULT_SCOPE = [
 ]
 DEFAULT_TIMEZONE = tz.gettz("Asia/Tokyo") or tz.tzlocal()
 
+ENGLISH_TO_JAPANESE_CONVERSIONS = (
+    {
+        "Very Good": "非常に良い",
+        "Good": "良い",
+        "Average": "普通",
+        "Poor": "悪い",
+        "Very Poor": "非常に悪い",
+    },
+    {
+        "Yes": "はい",
+        "No": "いいえ",
+    },
+)
+
 logger = logging.getLogger(__name__)
 
 
@@ -77,6 +91,13 @@ def normalize_cell_value(value: Any) -> str:
 
 def normalize_header_name(value: Any) -> str:
     return normalize_cell_value(value)
+
+
+def convert_english_to_japanese(value: str) -> str:
+    for conversion_table in ENGLISH_TO_JAPANESE_CONVERSIONS:
+        if value in conversion_table:
+            return conversion_table[value]
+    return value
 
 
 def replace_invalid_shiftjis_chars(value: str, replace_with: str = "?") -> str:
@@ -146,6 +167,8 @@ def make_record_from_row(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]
 
     for db_key, csv_key in mapping["string"].items():
         value = normalize_cell_value(row.get(csv_key))
+        if value:
+            value = convert_english_to_japanese(value)
         record[db_key] = jaconv.h2z(value) if value else None
 
     for db_key, csv_key in mapping["text"].items():
