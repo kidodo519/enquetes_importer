@@ -399,6 +399,7 @@ def import_facility(
             "Unknown delete_strategy '%s' for %s/%s" % (delete_strategy, corporation, facility_name)
         )
 
+    should_delete = facility_config.get("delete", True)
     enquete_key_prefix = facility_config.get("enquete_key_prefix")
     enquete_key_suffix = facility_config.get("enquete_key_suffix")
 
@@ -419,31 +420,38 @@ def import_facility(
             delete_keys.add(enquete_key)
         buffer.append([record.get(key) for key in ordered_keys])
 
-    if delete_strategy == "enquete_keys":
-        if delete_keys:
+    if should_delete:
+        if delete_strategy == "enquete_keys":
+            if delete_keys:
+                cursor.execute(
+                    f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key = ANY(%s)",
+                    (facility_code, list(delete_keys)),
+                )
+            else:
+                logger.info(
+                    "Skipping deletion for %s/%s because no enquete keys were generated.",
+                    corporation,
+                    facility_name,
+                )
+        elif delete_strategy == "enquete_key_prefix":
+            prefix = enquete_key_prefix
+            if not prefix:
+                raise ValueError(
+                    "delete_strategy 'enquete_key_prefix' requires 'enquete_key_prefix' to be set"
+                )
             cursor.execute(
-                f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key = ANY(%s)",
-                (facility_code, list(delete_keys)),
+                f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key LIKE %s",
+                (facility_code, f"{prefix}%"),
             )
         else:
-            logger.info(
-                "Skipping deletion for %s/%s because no enquete keys were generated.",
-                corporation,
-                facility_name,
+            cursor.execute(
+                f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
             )
-    elif delete_strategy == "enquete_key_prefix":
-        prefix = enquete_key_prefix
-        if not prefix:
-            raise ValueError(
-                "delete_strategy 'enquete_key_prefix' requires 'enquete_key_prefix' to be set"
-            )
-        cursor.execute(
-            f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key LIKE %s",
-            (facility_code, f"{prefix}%"),
-        )
     else:
-        cursor.execute(
-            f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
+        logger.info(
+            "Skipping deletion for %s/%s because delete is disabled in the configuration.",
+            corporation,
+            facility_name,
         )
 
     if not buffer:

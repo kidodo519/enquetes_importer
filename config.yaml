@@ -85,11 +85,13 @@ corporations:
     facilities:
       kifunosato:
         facility_code: 1
+        delete: true
         spreadsheet:
           id: xxxxx
         mapping: japanese
       roka_japanese:
         facility_code: 2
+        delete: true
         spreadsheet:
           id: xxxxx
         mapping: japanese
@@ -97,6 +99,7 @@ corporations:
         enquete_key_suffix: ja
       roka_english:
         facility_code: 2
+        delete: false
         spreadsheet:
           id: xxxxx
         mapping: english
