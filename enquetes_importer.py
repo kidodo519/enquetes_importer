@@ -390,7 +390,11 @@ def import_facility(
     )
 
     ordered_keys = list(build_ordered_keys(mapping))
-    insert_query = f"INSERT INTO {table_name} ({', '.join(ordered_keys)}) VALUES %s"
+    facility_table = normalize_optional_string(facility_config.get("table"))
+    if not facility_table:
+        facility_table = table_name
+
+    insert_query = f"INSERT INTO {facility_table} ({', '.join(ordered_keys)}) VALUES %s"
 
     should_delete = facility_config.get("delete", True)
     enquete_key_prefix = facility_config.get("enquete_key_prefix")
@@ -411,7 +415,7 @@ def import_facility(
 
     if should_delete:
         cursor.execute(
-            f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
+            f"DELETE FROM {facility_table} WHERE facility_code = %s", (facility_code,)
         )
     else:
         logger.info(

@@ -324,7 +324,16 @@ corporations:
         facility_code: 1
         spreadsheet:
           id: xxxxx
+          worksheet: enquetes
         mapping: enquetes
+        table: enquetes
+      hachinobo_text:
+        facility_code: 1
+        spreadsheet:
+          id: xxxxx
+          worksheet: enquetes_text
+        mapping: enquetes_text
+        table: enquetes_text
 
   kanon:
     db:
