@@ -174,7 +174,12 @@ def make_record_from_row(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]
     return record
 
 
-def build_enquete_key(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]) -> Optional[str]:
+def build_enquete_key(
+    row: Dict[str, Any],
+    mapping: Dict[str, Dict[str, str]],
+    prefix: Optional[str] = None,
+    suffix: Optional[str] = None,
+) -> Optional[str]:
     room_header = mapping["string"].get("room_number")
     start_date_header = mapping["date"].get("start_date") or mapping["datetime"].get("start_date")
 
@@ -190,15 +195,29 @@ def build_enquete_key(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]) -
     if not parsed:
         return None
 
-    return f"{room_value}-{parsed.strftime('%Y%m%d')}-1"
+    base_key = f"{room_value}-{parsed.strftime('%Y%m%d')}-1"
+    if prefix:
+        base_key = f"{prefix}{base_key}"
+    if suffix:
+        base_key = f"{base_key}-{suffix}"
+    return base_key
 
 
 def build_generated_fields(
-    row: Dict[str, Any], mapping: Dict[str, Dict[str, str]], facility_code: int
+    row: Dict[str, Any],
+    mapping: Dict[str, Dict[str, str]],
+    facility_code: int,
+    enquete_key_prefix: Optional[str] = None,
+    enquete_key_suffix: Optional[str] = None,
 ) -> Dict[str, Any]:
     return {
         "facility_code": facility_code,
-        "enquete_key": build_enquete_key(row, mapping),
+        "enquete_key": build_enquete_key(
+            row,
+            mapping,
+            prefix=enquete_key_prefix,
+            suffix=enquete_key_suffix,
+        ),
         "import_date": datetime.now(),
     }
 
@@ -349,11 +368,62 @@ def import_facility(
     ordered_keys = list(build_ordered_keys(mapping))
     insert_query = f"INSERT INTO {table_name} ({', '.join(ordered_keys)}) VALUES %s"
 
-    cursor.execute(
-        f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
-    )
+    delete_strategy = (
+        facility_config.get("delete_strategy") or "facility_code"
+    ).lower()
+    if delete_strategy not in {"facility_code", "enquete_keys", "enquete_key_prefix"}:
+        raise ValueError(
+            "Unknown delete_strategy '%s' for %s/%s" % (delete_strategy, corporation, facility_name)
+        )
 
-    if not records:
+    enquete_key_prefix = facility_config.get("enquete_key_prefix")
+    enquete_key_suffix = facility_config.get("enquete_key_suffix")
+
+    buffer: List[List[Any]] = []
+    delete_keys: Set[str] = set()
+    for row in records:
+        record = make_record_from_row(row, mapping)
+        generated_fields = build_generated_fields(
+            row,
+            mapping,
+            facility_code,
+            enquete_key_prefix=enquete_key_prefix,
+            enquete_key_suffix=enquete_key_suffix,
+        )
+        record.update(generated_fields)
+        enquete_key = record.get("enquete_key")
+        if delete_strategy == "enquete_keys" and enquete_key:
+            delete_keys.add(enquete_key)
+        buffer.append([record.get(key) for key in ordered_keys])
+
+    if delete_strategy == "enquete_keys":
+        if delete_keys:
+            cursor.execute(
+                f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key = ANY(%s)",
+                (facility_code, list(delete_keys)),
+            )
+        else:
+            logger.info(
+                "Skipping deletion for %s/%s because no enquete keys were generated.",
+                corporation,
+                facility_name,
+            )
+    elif delete_strategy == "enquete_key_prefix":
+        prefix = enquete_key_prefix
+        if not prefix:
+            raise ValueError(
+                "delete_strategy 'enquete_key_prefix' requires 'enquete_key_prefix' to be set"
+            )
+        cursor.execute(
+            f"DELETE FROM {table_name} WHERE facility_code = %s AND enquete_key LIKE %s",
+            (facility_code, f"{prefix}%"),
+        )
+    else:
+        cursor.execute(
+            f"DELETE FROM {table_name} WHERE facility_code = %s", (facility_code,)
+        )
+
+    if not buffer:
         connection.commit()
         logger.info(
             "No rows to import for %s/%s. Existing records have been cleared.",
@@ -361,12 +431,6 @@ def import_facility(
             facility_name,
         )
         return
-
-    buffer = []
-    for row in records:
-        record = make_record_from_row(row, mapping)
-        record.update(build_generated_fields(row, mapping, facility_code))
-        buffer.append([record.get(key) for key in ordered_keys])
 
     extras.execute_values(cursor, insert_query, buffer)
     connection.commit()
