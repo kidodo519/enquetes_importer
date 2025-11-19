@@ -203,7 +203,9 @@ def build_enquete_key(
     prefix: Optional[str] = None,
     suffix: Optional[str] = None,
 ) -> Optional[str]:
-    room_header = mapping["string"].get("room_number")
+    room_header = mapping["string"].get("room_number") or mapping["integer"].get(
+        "room_number"
+    )
     start_date_header = mapping["date"].get("start_date") or mapping["datetime"].get("start_date")
 
     if not room_header or not start_date_header:
