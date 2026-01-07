@@ -180,7 +180,10 @@ def make_record_from_row(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]
         value = normalize_cell_value(row.get(csv_key))
         if value:
             normalized_value = jaconv.z2h(value, digit=True, ascii=True)
-            record[db_key] = int(normalized_value) if normalized_value.isdecimal() else None
+            if db_key == "comprehensive_evaluation":
+                record[db_key] = normalize_comprehensive_evaluation(normalized_value)
+            else:
+                record[db_key] = int(normalized_value) if normalized_value.isdecimal() else None
         else:
             record[db_key] = None
 
@@ -200,6 +203,7 @@ def make_record_from_row(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]
 def build_enquete_key(
     row: Dict[str, Any],
     mapping: Dict[str, Dict[str, str]],
+    facility_code: int,
     prefix: Optional[str] = None,
     suffix: Optional[str] = None,
 ) -> Optional[str]:
@@ -220,7 +224,7 @@ def build_enquete_key(
     if not parsed:
         return None
 
-    base_key = f"{room_value}-{parsed.strftime('%Y%m%d')}-1"
+    base_key = f"{room_value}-{parsed.strftime('%Y%m%d')}-{facility_code}"
     if prefix:
         base_key = f"{prefix}{base_key}"
     if suffix:
@@ -240,11 +244,25 @@ def build_generated_fields(
         "enquete_key": build_enquete_key(
             row,
             mapping,
+            facility_code,
             prefix=enquete_key_prefix,
             suffix=enquete_key_suffix,
         ),
         "import_date": datetime.now(),
     }
+
+
+def normalize_comprehensive_evaluation(value: str) -> Optional[int]:
+    try:
+        numeric_value = float(value)
+    except (TypeError, ValueError):
+        return None
+
+    if numeric_value <= 0:
+        return 0
+    if numeric_value >= 100:
+        return 100
+    return int(numeric_value)
 
 
 def sanitize_mapping_reference(reference: Any) -> Any:
