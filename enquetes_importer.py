@@ -162,22 +162,61 @@ def build_ordered_keys(mapping: Dict[str, Dict[str, str]]) -> List[str]:
     return ordered_keys
 
 
-def make_record_from_row(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]) -> Dict[str, Any]:
+def normalize_value_conversions(
+    conversions: Optional[Dict[str, Dict[str, Any]]]
+) -> Dict[str, Dict[str, Any]]:
+    if not conversions:
+        return {}
+    normalized: Dict[str, Dict[str, Any]] = {}
+    for db_key, mapping in conversions.items():
+        if mapping is None:
+            continue
+        if not isinstance(mapping, dict):
+            raise TypeError(f"Value conversion for '{db_key}' must be a dictionary.")
+        normalized[db_key] = {
+            normalize_cell_value(source): target for source, target in mapping.items()
+        }
+    return normalized
+
+
+def apply_value_conversion(
+    value: Any, db_key: str, conversions: Dict[str, Dict[str, Any]]
+) -> Any:
+    if not conversions:
+        return value
+    table = conversions.get(db_key)
+    if not table:
+        return value
+    normalized = normalize_cell_value(value)
+    if not normalized:
+        return value
+    return table.get(normalized, value)
+
+
+def make_record_from_row(
+    row: Dict[str, Any],
+    mapping: Dict[str, Dict[str, str]],
+    value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
+) -> Dict[str, Any]:
     record: Dict[str, Any] = {}
+    normalized_conversions = value_conversions or {}
 
     for db_key, csv_key in mapping["string"].items():
-        value = normalize_cell_value(row.get(csv_key))
+        value = apply_value_conversion(row.get(csv_key), db_key, normalized_conversions)
+        value = normalize_cell_value(value)
         if value:
             value = convert_english_to_japanese(value)
         record[db_key] = jaconv.h2z(value) if value else None
 
     for db_key, csv_key in mapping["text"].items():
-        value = normalize_cell_value(row.get(csv_key))
+        value = apply_value_conversion(row.get(csv_key), db_key, normalized_conversions)
+        value = normalize_cell_value(value)
         value = replace_invalid_shiftjis_chars(value)
         record[db_key] = jaconv.h2z(value) if value else None
 
     for db_key, csv_key in mapping["integer"].items():
-        value = normalize_cell_value(row.get(csv_key))
+        value = apply_value_conversion(row.get(csv_key), db_key, normalized_conversions)
+        value = normalize_cell_value(value)
         if value:
             normalized_value = jaconv.z2h(value, digit=True, ascii=True)
             if db_key == "comprehensive_evaluation":
@@ -188,12 +227,14 @@ def make_record_from_row(row: Dict[str, Any], mapping: Dict[str, Dict[str, str]]
             record[db_key] = None
 
     for db_key, csv_key in mapping["date"].items():
-        value = normalize_cell_value(row.get(csv_key))
+        value = apply_value_conversion(row.get(csv_key), db_key, normalized_conversions)
+        value = normalize_cell_value(value)
         parsed = parse_datetime_value(value)
         record[db_key] = parsed.date() if parsed else None
 
     for db_key, csv_key in mapping["datetime"].items():
-        value = normalize_cell_value(row.get(csv_key))
+        value = apply_value_conversion(row.get(csv_key), db_key, normalized_conversions)
+        value = normalize_cell_value(value)
         parsed = parse_datetime_value(value)
         record[db_key] = parsed if parsed else None
 
@@ -206,6 +247,7 @@ def build_enquete_key(
     facility_code: int,
     prefix: Optional[str] = None,
     suffix: Optional[str] = None,
+    value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Optional[str]:
     room_header = mapping["string"].get("room_number") or mapping["integer"].get(
         "room_number"
@@ -215,7 +257,10 @@ def build_enquete_key(
     if not room_header or not start_date_header:
         return None
 
-    room_value = jaconv.z2h(normalize_cell_value(row.get(room_header)), digit=True, ascii=True)
+    room_raw_value = apply_value_conversion(
+        row.get(room_header), "room_number", value_conversions or {}
+    )
+    room_value = jaconv.z2h(normalize_cell_value(room_raw_value), digit=True, ascii=True)
     if not room_value or not room_value.isdecimal():
         return None
 
@@ -238,6 +283,7 @@ def build_generated_fields(
     facility_code: int,
     enquete_key_prefix: Optional[str] = None,
     enquete_key_suffix: Optional[str] = None,
+    value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
     return {
         "facility_code": facility_code,
@@ -247,6 +293,7 @@ def build_generated_fields(
             facility_code,
             prefix=enquete_key_prefix,
             suffix=enquete_key_suffix,
+            value_conversions=value_conversions,
         ),
         "import_date": datetime.now(),
     }
@@ -281,6 +328,33 @@ def normalize_optional_string(value: Any) -> Optional[str]:
         return normalized or None
     normalized = str(value).strip()
     return normalized or None
+
+
+def normalize_language_key(value: Any) -> Optional[str]:
+    normalized = normalize_optional_string(value)
+    if normalized is None:
+        return None
+    return normalized.casefold()
+
+
+def build_language_mappings(
+    available_mappings: Dict[str, Any],
+    mapping_reference: Any,
+    language_mappings: Dict[str, Any],
+) -> Dict[str, Dict[str, Dict[str, str]]]:
+    resolved: Dict[str, Dict[str, Dict[str, str]]] = {}
+    for language_key, reference in language_mappings.items():
+        normalized_key = normalize_language_key(language_key)
+        if normalized_key is None:
+            continue
+        if normalized_key == "default":
+            normalized_key = "default"
+        resolved[normalized_key] = resolve_mapping(available_mappings, reference)
+
+    if "default" not in resolved and mapping_reference is not None:
+        resolved["default"] = resolve_mapping(available_mappings, mapping_reference)
+
+    return resolved
 
 
 def open_worksheet(
@@ -399,17 +473,41 @@ def import_facility(
             corporation_config.get("mapping")
         )
 
-    mapping = resolve_mapping(available_mappings, mapping_reference)
+    language_column = normalize_optional_string(facility_config.get("language_column"))
+    language_mappings_config = facility_config.get("language_mappings", {}) or {}
+    value_conversions = normalize_value_conversions(
+        facility_config.get("value_conversions")
+    )
+
+    if language_column:
+        if not language_mappings_config and mapping_reference is None:
+            raise ValueError(
+                "language_column is set but no language_mappings or default mapping is defined."
+            )
+        resolved_language_mappings = build_language_mappings(
+            available_mappings, mapping_reference, language_mappings_config
+        )
+        if not resolved_language_mappings:
+            raise ValueError("language_mappings did not resolve to any valid mappings.")
+        required_headers = {language_column}
+        for mapping in resolved_language_mappings.values():
+            required_headers.update(extract_required_headers(mapping))
+        mapping_for_schema = resolved_language_mappings.get("default") or next(
+            iter(resolved_language_mappings.values())
+        )
+    else:
+        mapping_for_schema = resolve_mapping(available_mappings, mapping_reference)
+        resolved_language_mappings = {"default": mapping_for_schema}
+        required_headers = extract_required_headers(mapping_for_schema)
 
     worksheet = open_worksheet(client, facility_config, default_worksheet)
-    records = read_records(worksheet, extract_required_headers(mapping))
-
+    records = read_records(worksheet, required_headers)
 
     logger.info(
         "Fetched %d rows from %s/%s", len(records), corporation, facility_name
     )
 
-    ordered_keys = list(build_ordered_keys(mapping))
+    ordered_keys = list(build_ordered_keys(mapping_for_schema))
     facility_table = normalize_optional_string(facility_config.get("table"))
     if not facility_table:
         facility_table = table_name
@@ -422,13 +520,30 @@ def import_facility(
 
     buffer: List[List[Any]] = []
     for row in records:
-        record = make_record_from_row(row, mapping)
+        if language_column:
+            language_value = normalize_language_key(row.get(language_column))
+            mapping = resolved_language_mappings.get(language_value) or resolved_language_mappings.get(
+                "default"
+            )
+            if mapping is None:
+                logger.warning(
+                    "Skipping row with unknown language '%s' in %s/%s.",
+                    language_value or "",
+                    corporation,
+                    facility_name,
+                )
+                continue
+        else:
+            mapping = mapping_for_schema
+
+        record = make_record_from_row(row, mapping, value_conversions=value_conversions)
         generated_fields = build_generated_fields(
             row,
             mapping,
             facility_code,
             enquete_key_prefix=enquete_key_prefix,
             enquete_key_suffix=enquete_key_suffix,
+            value_conversions=value_conversions,
         )
         record.update(generated_fields)
         buffer.append([record.get(key) for key in ordered_keys])

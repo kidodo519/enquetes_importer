@@ -104,6 +104,75 @@ corporations:
         mapping: english
         enquete_key_suffix: en
 
+  goshobo:
+    db:
+      host: xxxxx
+      port: 5432
+      user: xxxxx
+      password: xxxxx
+      database: xxxxx
+    mappings:
+      goshobo_japanese:
+        string:
+          staff_service: "接客対応"
+          room_cleaning: "客室"
+          dinner_taste: "お食事"
+          repeat_request: "再訪のご予定"
+          dm_availability: "今後のご案内"
+          mail: "E-mail"
+          how_to_know: "当宿をお選びいただいた理由"
+        text:
+          impression: "改善すべき点"
+          dinner2: "良かった点"
+        integer:
+          room_number: "今回ご利用のお部屋"
+          comprehensive_evaluation: "全体"
+        date:
+          time_stamp: "タイムスタンプ"
+          start_date: "ご宿泊の到着日"
+        datetime: {}
+      goshobo_english:
+        string:
+          staff_service: "Hospitality"
+          room_cleaning: "Room"
+          dinner_taste: "Meals"
+          repeat_request: "Plans to R"
+          mail: "E-mail"
+          how_to_know: "Reason for"
+        text:
+          impression: "Comments"
+          dinner2: "Positive As"
+          bath2: "Areas for"
+        integer:
+          room_number: "Room You"
+          comprehensive_evaluation: "Overall Ex"
+        date:
+          time_stamp: "タイムスタンプ"
+          start_date: "ご宿泊の到着日"
+        datetime: {}
+    facilities:
+      goshobo:
+        facility_code: 1
+        delete: true
+        spreadsheet:
+          id: xxxxx
+        language_column: "言語 / Language"
+        language_mappings:
+          日本語: goshobo_japanese
+          English: goshobo_english
+        value_conversions:
+          room_number:
+            1号棟: "1"
+            2号棟: "2"
+            3号棟: "3"
+            4号棟: "4"
+            5号棟: "5"
+            6号棟: "6"
+            7号棟: "7"
+            8号棟: "8"
+            9号棟: "9"
+            10号棟: "10"
+
   tachibanaya:
     db:
       host: incrazetech-app-db-prod.app-prod.incrazetech.dev
