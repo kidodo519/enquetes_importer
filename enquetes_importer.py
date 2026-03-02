@@ -44,6 +44,14 @@ def build_parser() -> ArgumentParser:
         description="Import enquete spreadsheet data into the configured databases."
     )
     parser.add_argument(
+        "--config",
+        default="config.yaml",
+        help=(
+            "Configuration YAML path. Relative paths are resolved from the script directory. "
+            "Defaults to '%(default)s'."
+        ),
+    )
+    parser.add_argument(
         "-c",
         "--corporation",
         dest="corporations",
@@ -583,7 +591,9 @@ def main() -> None:
     args = parser.parse_args()
 
     base_path = os.path.dirname(__file__)
-    config_path = os.path.join(base_path, "config.yaml")
+    config_path = args.config
+    if not os.path.isabs(config_path):
+        config_path = os.path.join(base_path, config_path)
     config = load_config(config_path)
 
     mappings = config.get("mappings", {})
