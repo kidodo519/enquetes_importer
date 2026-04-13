@@ -345,6 +345,24 @@ def normalize_language_key(value: Any) -> Optional[str]:
     return normalized.casefold()
 
 
+def execute_before_insert_sql(
+    cursor: psycopg2.extensions.cursor,
+    before_insert_sql: Optional[str],
+    corporation: str,
+    facility_name: str,
+) -> None:
+    sql = normalize_optional_string(before_insert_sql)
+    if not sql:
+        return
+
+    cursor.execute(sql)
+    logger.info(
+        "Executed before_insert_sql for %s/%s.",
+        corporation,
+        facility_name,
+    )
+
+
 def build_language_mappings(
     available_mappings: Dict[str, Any],
     mapping_reference: Any,
@@ -523,6 +541,7 @@ def import_facility(
     insert_query = f"INSERT INTO {facility_table} ({', '.join(ordered_keys)}) VALUES %s"
 
     should_delete = facility_config.get("delete", True)
+    before_insert_sql = facility_config.get("before_insert_sql")
     enquete_key_prefix = facility_config.get("enquete_key_prefix")
     enquete_key_suffix = facility_config.get("enquete_key_suffix")
 
@@ -555,6 +574,8 @@ def import_facility(
         )
         record.update(generated_fields)
         buffer.append([record.get(key) for key in ordered_keys])
+
+    execute_before_insert_sql(cursor, before_insert_sql, corporation, facility_name)
 
     if should_delete:
         cursor.execute(

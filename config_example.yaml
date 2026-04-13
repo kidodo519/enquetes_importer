@@ -103,6 +103,13 @@ corporations:
           id: xxxxx
         mapping: english
         enquete_key_suffix: en
+      sankoh:
+        facility_code: 3
+        delete: false
+        before_insert_sql: "DELETE FROM enquetes WHERE facility_code = 3 AND start_date >= CURRENT_DATE - INTERVAL '90 days'"
+        spreadsheet:
+          id: xxxxx
+        mapping: japanese
 
   goshobo:
     db:
