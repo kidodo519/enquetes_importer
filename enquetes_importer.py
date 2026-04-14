@@ -23,6 +23,7 @@ from db_importer import (
     normalize_optional_string,
 )
 from facility_processors import (
+    apply_facility_overrides,
     build_facility_value_conversions,
     get_additional_required_headers,
     resolve_facility_code,
@@ -43,7 +44,7 @@ def build_parser() -> ArgumentParser:
     )
     parser.add_argument(
         "--config",
-        default="config.yaml",
+        default="config_db.yaml",
         help=(
             "Configuration YAML path. Relative paths are resolved from the script directory. "
             "Defaults to '%(default)s'."
@@ -146,16 +147,16 @@ def open_worksheet(
 ):
     spreadsheet_config = facility_config.get("spreadsheet") or {}
     spreadsheet_id = normalize_optional_string(
-        spreadsheet_config.get("id") or facility_config.get("spreadsheet_id")
+        facility_config.get("spreadsheet_id") or spreadsheet_config.get("id")
     )
 
     if not spreadsheet_id:
-        raise ValueError("'spreadsheet.id' is required in each facility configuration.")
+        raise ValueError("'spreadsheet_id' is required in each facility configuration.")
 
     workbook = client.open_by_key(spreadsheet_id)
 
     worksheet_name = normalize_optional_string(
-        spreadsheet_config.get("worksheet") or facility_config.get("worksheet")
+        facility_config.get("worksheet") or spreadsheet_config.get("worksheet")
     )
     if not worksheet_name:
         worksheet_name = default_worksheet
@@ -229,6 +230,8 @@ def import_facility(
     default_worksheet: Optional[str],
     table_name: str,
 ) -> None:
+    facility_config = apply_facility_overrides(corporation, facility_name, facility_config)
+
     if "facility_code" not in facility_config:
         raise ValueError("'facility_code' is required in each facility configuration.")
 
