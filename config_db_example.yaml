@@ -17,7 +17,9 @@ corporations:
         facility_code: 1
         delete: false
         before_insert_sql: "DELETE FROM enquetes WHERE enquete_system_name = 'spreadsheet'"
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: sankoh
         facility_processors:
           facility_code:
@@ -36,19 +38,25 @@ corporations:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: 1Ixx
+        spreadsheet:
+          id: 1Ixx
+          worksheet: フォームの回答 1
         mapping_files: a_and_c_japanese
       roka_japanese:
         facility_code: 2
         delete: true
         before_insert_sql:
-        spreadsheet_id: 1xx
+        spreadsheet:
+          id: 1xx
+          worksheet: フォームの回答 1
         mapping_files: a_and_c_japanese
       roka_english:
         facility_code: 2
         delete: false
         before_insert_sql:
-        spreadsheet_id: xxx
+        spreadsheet:
+          id: xxx
+          worksheet: フォームの回答 1
         mapping_files: a_and_c_english
 
   tachibanaya:
@@ -63,7 +71,9 @@ corporations:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: tachibanaya
 
   ginzansou:
@@ -78,7 +88,9 @@ corporations:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: ginzansou
 
   sunshine:
@@ -93,13 +105,17 @@ corporations:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: sunshine
       tsuganoki:
         facility_code: 2
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: sunshine
 
   hachinobo:
@@ -114,14 +130,46 @@ corporations:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: hachinobo
+        facility_processors:
+          facility_settings:
+            provider: hachinobo_enquetes_settings
       hachinobo_text:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: hachinobo_text
+        facility_processors:
+          facility_settings:
+            provider: hachinobo_text_settings
+
+  goshobo:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_goshobo_insert
+      password: xxxx
+      database: reservation_db_goshobo
+    facilities:
+      goshobo:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
+        mapping_files:
+          - goshobo_japanese
+          - goshobo_english
+        facility_processors:
+          value_conversions:
+            provider: goshobo_room_number_conversions
 
   kanon:
     db:
@@ -135,19 +183,25 @@ corporations:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: kanon
       fujiya:
         facility_code: 2
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: kanon
       kureha:
         facility_code: 3
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: kureha
 
   kinokuniya:
@@ -162,47 +216,63 @@ corporations:
         facility_code: 1
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
       kino_hanare:
         facility_code: 2
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
       kino_bettei:
         facility_code: 3
         delete: true
         before_insert_sql:
-        spreadsheet_id: 1xxxx
+        spreadsheet:
+          id: 1xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
       oyadohiruta:
         facility_code: 4
         delete: true
         before_insert_sql:
-        spreadsheet_id: 1xxxx
+        spreadsheet:
+          id: 1xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
       yuumi:
         facility_code: 5
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
       sazane:
         facility_code: 6
         delete: true
         before_insert_sql:
-        spreadsheet_id: 1xxxx
+        spreadsheet:
+          id: 1xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
       amane:
         facility_code: 7
         delete: true
         before_insert_sql:
-        spreadsheet_id: 1xxxx
+        spreadsheet:
+          id: 1xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
       danqoo:
         facility_code: 8
         delete: true
         before_insert_sql:
-        spreadsheet_id: xxxx
+        spreadsheet:
+          id: xxxx
+          worksheet: フォームの回答 1
         mapping_files: kinokuniya
