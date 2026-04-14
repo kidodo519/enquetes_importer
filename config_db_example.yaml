@@ -19,6 +19,10 @@ corporations:
         before_insert_sql: "DELETE FROM enquetes WHERE enquete_system_name = 'spreadsheet'"
         spreadsheet_id: xxxx
         mapping_files: sankoh
+        facility_processors:
+          facility_code:
+            resolver: resolve_sankoh_facility_code
+            required_headers: get_sankoh_required_headers
 
   a_and_c:
     db:

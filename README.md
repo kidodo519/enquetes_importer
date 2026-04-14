@@ -94,8 +94,25 @@ python enquetes_importer.py --config config_db.yaml -c a_and_c -f sankoh
 施設固有ロジックは `facility_processors.py` 側の override/processor で吸収します。
 `config_db.yaml` には施設固有パラメータを直接書かず、共通キーのみを記載してください。
 
-- `facility_code_processor`: 行データから `facility_code` を動的に解決
-- `value_conversion_processor`: 施設固有の値変換テーブルを追加
+- `facility_processors`: 施設プロセッサ定義（ネスト構造）
+  - `facility_code.resolver`: 行データから `facility_code` を動的に解決する関数名
+  - `facility_code.required_headers`: 追加必須ヘッダーを返す関数名
+  - `value_conversions.provider`: 施設固有の値変換テーブルを返す関数名
+
+例:
+
+```yaml
+corporations:
+  sankoh:
+    facilities:
+      sankoh:
+        facility_processors:
+          facility_code:
+            resolver: resolve_sankoh_facility_code
+            required_headers: get_sankoh_required_headers
+```
+
+後方互換として `facility_code_processor` / `value_conversion_processor` も引き続き利用できます。
 
 ### sankoh の facility_code 変換
 
