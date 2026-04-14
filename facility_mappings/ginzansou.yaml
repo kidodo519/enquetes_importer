@@ -1,0 +1,28 @@
+mappings:
+  string:
+    comprehensive_evaluation: " 1 ) 今回ご予約いただいたご宿泊は総合的にみていかがでしたか?"
+    clerk_service_evaluation: "2) 従業員のサービスはいかがでしたか?"
+    clerk_service_choices: "従業員のサービスについて、満足した点全てに✔︎をご記入ください。(い く つ で も )"
+    room_evaluation: "3) お部屋はいかがでしたか?"
+    room_choices: "お部屋について満足した点全てに✔︎をご記入ください。(いくつでも)"
+    dinner_evaluation: "4) ご夕食はいかがでしたか?"
+    dinner_choices: " ご夕食はいかがでしたか? 夕食について満足した点全てに✔︎をご記入ください。 (いくつでも)"
+    morning_evaluation: "5) ご朝食はいかがでしたか?"
+    morning_choices: " ご朝食はいかがでしたか? 朝食について満足した点全てに✔︎をご記入ください。 (いくつでも)"
+    bath_evaluation: "6) 大浴場はいかがでしたか"
+    bath_choices: "大浴場について満足した点全てに✔︎をご記入ください。(いくつでも)"
+    other_choices: " 7) それ以外の項目について 、満足した点全てに✔︎をご記入ください。(いくつでも)"
+    decisive_factor: " 8) 今回のご宿泊はどのようにお決めになられましたか?全てに✔︎をご記入ください。（いくつでも）"
+    after_impression: "今回のご宿泊はお泊り前の印象と一致しましたか?"
+    phone_number: "お電話番号"
+    room_number: "お部屋番号"
+  text:
+    impression: "印象と異なった点は具体的にはどんなことでしたか?"
+    requests: "9) サービス、施設などのご希望、ご要望などお聞かせください。"
+    good_staff: "良い印象のスタッフがおりましたらお聞かせください。(「お部屋案内の人」等でも構いません)"
+  integer:
+    recommended_evaluation: "旅行を検討中のご家族やご友人に「銀山荘」を薦めたいと思われますか? 0 点から10点満点のうち点数を一つお選びいただき、✔︎をご記入ください。"
+  date:
+    time_stamp: "タイムスタンプ"
+    start_date: "ご宿泊日"
+  datetime: {}

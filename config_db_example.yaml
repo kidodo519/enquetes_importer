@@ -1,0 +1,309 @@
+---
+csv:
+  encoding: Shift_JIS
+
+google:
+  worksheet: フォームの回答 1
+
+corporations:
+  sankoh:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_sankoh_insert
+      password: xxxx
+      database: reservation_db_sankoh
+    facilities:
+      sankoh:
+        facility_code: 1
+        delete: false
+        before_insert_sql: "DELETE FROM enquetes WHERE enquete_system_name = 'spreadsheet'"
+        spreadsheet:
+          id: xxxx
+        mapping_files: sankoh
+        facility_code_processor: sankoh_facility_code
+        facility_code_source: 宿泊施設
+
+
+  a_and_c:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_a_and_c_insert
+      password: xxxx
+      database: reservation_db_a_and_c
+    facilities:
+      kifunosato:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: 1Ixx
+        mapping_files: a_and_c_japanese
+        enquete_key_suffix:
+      roka_japanese:
+        facility_code: 2
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: 1xx
+        mapping_files: a_and_c_japanese
+        enquete_key_suffix: ja
+      roka_english:
+        facility_code: 2
+        delete: false
+        before_insert_sql:
+        spreadsheet:
+          id: xxx
+        mapping_files: a_and_c_english
+        enquete_key_suffix: en
+
+
+  tachibanaya:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_tachibanaya_insert
+      password: xxxx
+      database: reservation_db_tachibanaya
+    facilities:
+      tachibanaya:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: tachibanaya
+        enquete_key_suffix:
+
+
+  ginzansou:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_ginzansou_insert
+      password: xxxx
+      database: reservation_db_ginzansou
+    facilities:
+      ginzansou:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: ginzansou
+        enquete_key_suffix:
+
+
+  sunshine:
+    db:
+      host: ixxx
+      port: 5432
+      user: user_sunshine_insert
+      password: wxxx
+      database: reservation_db_sunshine
+    facilities:
+      sunshine:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: sunshine
+        enquete_key_suffix:
+      tsuganoki:
+        facility_code: 2
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: sunshine
+        enquete_key_suffix:
+
+
+  hachinobo:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_hachinobo_insert
+      password: xxxx
+      database: reservation_db_hachinobo
+    facilities:
+      hachinobo:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+          worksheet: "アンケート結果"
+        mapping_files: hachinobo
+        enquete_key_suffix:
+        table: enquetes
+      hachinobo_text:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+          worksheet: "対応内容"
+        mapping_files: hachinobo_text
+        enquete_key_suffix:
+        table: enquetes_text
+
+
+  kanon:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_kanon_insert
+      password: xxxx
+      database: reservation_db_kanon
+    facilities:
+      kanon:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+          worksheet: "楓音"
+        mapping_files: kanon
+        enquete_key_suffix:
+      kanon:
+        facility_code: 2
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+          worksheet: "ふじや"
+        mapping_files: kanon
+        enquete_key_suffix:
+      kureha:
+        facility_code: 3
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: kureha
+        enquete_key_suffix:
+
+
+  kinokuniya:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_kinokuniya_insert
+      password: xxxx
+      database: reservation_db_kinokuniya
+    facilities:
+      kinokuniya:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+      kino_hanare:
+        facility_code: 2
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+      kino_bettei:
+        facility_code: 3
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: 1xxxx
+        mmapping_files: kinokuniya
+        enquete_key_suffix:
+      oyadohiruta:
+        facility_code: 4
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: 1xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+      yuumi:
+        facility_code: 5
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+      sazane:
+        facility_code: 6
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: 1xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+      amane:
+        facility_code: 7
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: 1xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+      danqoo:
+        facility_code: 8
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+      misasa:
+        facility_code: 9
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: kinokuniya
+        enquete_key_suffix:
+
+
+  goshobo:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_goshobo_insert
+      password: yxxxx
+      database: reservation_db_goshobo
+    facilities:
+      goshobo:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: 1xxxx
+        enquete_key_suffix:
+        mapping_files:
+          - goshobo_japanese
+          - goshobo_english
+        language_column: "言語 / Language"
+        value_conversion_processor: goshobo_room_number
+
+
+  katakura:
+    db:
+      host: xxxx
+      port: 5432
+      user: user_katakura_insert
+      password: xxxx
+      database: reservation_db_katakura
+    facilities:
+      katakura:
+        facility_code: 1
+        delete: true
+        before_insert_sql:
+        spreadsheet:
+          id: xxxx
+        mapping_files: katakura
+        enquete_key_suffix:

@@ -1,0 +1,32 @@
+mappings:
+  string:
+    room_number: "部屋番号"
+    repeat: "来館頻度"
+    how_to_know: "当館を知ったきっかけ"
+    tel_qual: "電話対応の質"
+    dinner_taste: "夕食の内容について　味"
+    dinner_sat: "夕食の内容について　満足度"
+    dinner_vol: "夕食の内容について　ボリューム"
+    dinner_menu: "夕食の内容について　献立"
+    dinner_pace: "夕食の内容について　食事の提供ペース"
+    morning_taste: "朝食の内容について　味"
+    morning_sat: "朝食の内容について　満足度"
+    morning_vol: "朝食の内容について　ボリューム"
+    morning_menu: "朝食の内容について　献立"
+    room_clean: "お部屋の清潔状況"
+    bath_clean: "お風呂の清掃状況"
+    facility_clean: "館内全体の清掃状況"
+    staff_service: "スタッフのサービス全般について"
+    price_eval: "料金設定はいかがでしたでしょうか"
+    repeat_request: "もう一度利用したいと思いますか？"
+  text:
+    dinner_text: "夕食の内容について　自由記入欄"
+    best_dish: "献立の中で一番美味しかった料理"
+    add_dish: "献立に加えて欲しい料理"
+    morning_text: "朝食の内容について　自由記入欄"
+    impression: "その他自由記入欄"
+  integer: {}
+  date:
+    time_stamp: "タイムスタンプ"
+    start_date: "宿泊日"
+  datetime: {}

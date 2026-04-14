@@ -1,0 +1,21 @@
+mappings:
+  string:
+    dinner: "ご夕食"
+    morning: "ご朝食"
+    front_clerk: "フロント係"
+    room_clerk: "客室係"
+    room: "お部屋"
+    room_bath: "お部屋浴場"
+    amenities: "アメニティ"
+    dogs_amenities: "ワンちゃん備品"
+    bed: "ベッド・お布団"
+    bath: "大浴場"
+    room_number: "お部屋番号"
+    guest_name: "お名前"
+    mail: "メールアドレス"
+    dm_availability: "DM送付可否"
+  text: {}
+  integer: {}
+  date:
+    start_date: "宿泊日"
+  datetime: {}

@@ -1,0 +1,12 @@
+mappings:
+  string:
+    room_number: "部屋番号"
+    support: "対応"
+  text:
+    guest_name: "名前"
+    enquete_text: "アンケート結果"
+    solution_text: "備考"
+  integer: {}
+  date:
+    start_date: "日付"
+  datetime: {}

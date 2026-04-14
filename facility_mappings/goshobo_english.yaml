@@ -1,0 +1,19 @@
+mappings:
+  string:
+    staff_service: Hospitality
+    room_cleaning: Room
+    dinner_taste: Meals
+    repeat_request: Plans to R
+    mail: E-mail
+    how_to_know: Reason for
+  text:
+    impression: Comments
+    dinner2: Positive As
+    bath2: Areas for
+  integer:
+    room_number: Room You
+    comprehensive_evaluation: Overall Ex
+  date:
+    time_stamp: タイムスタンプ
+    start_date: ご宿泊の到着日
+  datetime: {}

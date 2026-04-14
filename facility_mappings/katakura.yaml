@@ -1,0 +1,18 @@
+mappings:
+  string:
+    mail: "メールアドレス"
+    total_satisfaction: "ご滞在全体の満足度"
+    room_cleaning: "お部屋の清潔さ"
+    staff_service: "スタッフの対応"
+    repeat_request: "再度ご宿泊になりたいと思いますか？"
+    room_number: "お部屋番号"
+  text:
+    impression: "その他お気づきの点や印象に残ったことがございましたらご記入下さい。"
+    opinion: "どのようなサービスがあるとさらに利用したいと思われますか？"
+    request: "ご友人・ご家族に当ホテルをお勧めいただく際、どのようなサービス・特典があると勧めやすいですか？"
+  integer:
+    comprehensive_evaluation: "今回のご滞在を100点満点で表すと何点ですか？"
+  date:
+    time_stamp: "タイムスタンプ"
+    start_date: "ご宿泊日（チェックイン日）"
+  datetime: {}

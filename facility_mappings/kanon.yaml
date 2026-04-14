@@ -1,0 +1,9 @@
+mappings:
+  string:
+    room_number: "部屋名"
+  text:
+    impression: "アンケート結果"
+  integer: {}
+  date:
+    start_date: "宿泊日"
+  datetime: {}
