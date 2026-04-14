@@ -286,6 +286,11 @@ def import_facility(
     logger.info("Fetched %d rows from %s/%s", len(records), corporation, facility_name)
 
     ordered_keys = list(build_ordered_keys(mapping_for_schema))
+    fixed_values = facility_config.get("fixed_values")
+    if isinstance(fixed_values, dict):
+        for key in fixed_values:
+            if key not in ordered_keys:
+                ordered_keys.append(key)
     facility_table = normalize_optional_string(facility_config.get("table")) or table_name
     should_delete = facility_config.get("delete", True)
 
@@ -312,7 +317,6 @@ def import_facility(
 
         actual_facility_code = resolve_facility_code(row, facility_config, default_facility_code)
         record = make_record_from_row(row, mapping, value_conversions=value_conversions)
-        fixed_values = facility_config.get("fixed_values")
         if isinstance(fixed_values, dict):
             record.update(fixed_values)
         record.update(
