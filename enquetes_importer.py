@@ -22,7 +22,11 @@ from db_importer import (
     insert_rows,
     normalize_optional_string,
 )
-from facility_processors import get_additional_required_headers, resolve_facility_code
+from facility_processors import (
+    build_facility_value_conversions,
+    get_additional_required_headers,
+    resolve_facility_code,
+)
 
 DEFAULT_TABLE_NAME = "enquetes"
 DEFAULT_SCOPE = [
@@ -109,6 +113,28 @@ def build_language_mappings(
 
     if "default" not in resolved and mapping_reference is not None:
         resolved["default"] = resolve_mapping(available_mappings, mapping_reference)
+
+    return resolved
+
+
+def build_language_mappings_from_mapping_names(
+    available_mappings: Dict[str, Any], mapping_names: Iterable[str]
+) -> Dict[str, Dict[str, Dict[str, str]]]:
+    resolved: Dict[str, Dict[str, Dict[str, str]]] = {}
+    for mapping_name in mapping_names:
+        normalized_name = normalize_language_key(mapping_name)
+        if normalized_name is None:
+            continue
+        mapping = resolve_mapping(available_mappings, mapping_name)
+        lowered = normalized_name
+
+        if "japanese" in lowered or "日本語" in lowered or lowered.endswith("_ja"):
+            resolved["日本語"] = mapping
+            resolved["japanese"] = mapping
+        if "english" in lowered or "英語" in lowered or lowered.endswith("_en"):
+            resolved["english"] = mapping
+        if lowered in ("default",):
+            resolved["default"] = mapping
 
     return resolved
 
@@ -218,12 +244,24 @@ def import_facility(
 
     language_column = normalize_optional_string(facility_config.get("language_column"))
     language_mappings_config = facility_config.get("language_mappings", {}) or {}
-    value_conversions = normalize_value_conversions(facility_config.get("value_conversions"))
+    value_conversions = build_facility_value_conversions(
+        facility_config,
+        normalize_value_conversions(facility_config.get("value_conversions")),
+    )
 
     if language_column:
+        if not language_mappings_config:
+            language_mappings_config = {
+                key: key for key in (facility_config.get("mappings", {}) or {}).keys()
+            }
         resolved_language_mappings = build_language_mappings(
             available_mappings, mapping_reference, language_mappings_config
         )
+        if "日本語" not in resolved_language_mappings and "english" not in resolved_language_mappings:
+            inferred = build_language_mappings_from_mapping_names(
+                available_mappings, language_mappings_config.values()
+            )
+            resolved_language_mappings.update(inferred)
         if not resolved_language_mappings:
             raise ValueError("language_mappings did not resolve to any valid mappings.")
         required_headers = {language_column}
