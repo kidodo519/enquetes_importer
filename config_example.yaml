@@ -109,7 +109,9 @@ corporations:
         before_insert_sql: "DELETE FROM enquetes WHERE facility_code = 3 AND start_date >= CURRENT_DATE - INTERVAL '90 days'"
         spreadsheet:
           id: xxxxx
-        mapping: japanese
+        mapping_files:
+          - facility_mappings/a_and_c/sankoh.yaml
+        mapping: sankoh_japanese
         facility_code_processor: sankoh_facility_code
         facility_code_source: 宿泊施設
 
@@ -165,6 +167,8 @@ corporations:
         delete: true
         spreadsheet:
           id: xxxxx
+        mapping_files:
+          - facility_mappings/goshobo/goshobo.yaml
         language_column: "言語 / Language"
         language_mappings:
           日本語: goshobo_japanese
