@@ -209,6 +209,7 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
             }
         },
         "facility_code_source": "宿泊施設",
+        "fixed_values": {"enquete_system_name": "spreadsheet"},
         "mapping": "default",
     },
     "a_and_c.kifunosato": {
