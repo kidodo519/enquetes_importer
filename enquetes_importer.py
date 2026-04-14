@@ -22,7 +22,11 @@ from db_importer import (
     insert_rows,
     normalize_optional_string,
 )
-from facility_processors import get_additional_required_headers, resolve_facility_code
+from facility_processors import (
+    build_facility_value_conversions,
+    get_additional_required_headers,
+    resolve_facility_code,
+)
 
 DEFAULT_TABLE_NAME = "enquetes"
 DEFAULT_SCOPE = [
@@ -218,7 +222,10 @@ def import_facility(
 
     language_column = normalize_optional_string(facility_config.get("language_column"))
     language_mappings_config = facility_config.get("language_mappings", {}) or {}
-    value_conversions = normalize_value_conversions(facility_config.get("value_conversions"))
+    value_conversions = build_facility_value_conversions(
+        facility_config,
+        normalize_value_conversions(facility_config.get("value_conversions")),
+    )
 
     if language_column:
         resolved_language_mappings = build_language_mappings(

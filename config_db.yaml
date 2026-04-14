@@ -39,7 +39,7 @@ corporations:
         spreadsheet:
           id: xxxxx
         mapping: japanese
-        special_processor: sankoh
+        facility_code_processor: sankoh_facility_code
         facility_code_source: 宿泊施設
   goshobo:
     db:
@@ -58,18 +58,7 @@ corporations:
         language_mappings:
           日本語: goshobo_japanese
           English: goshobo_english
-        value_conversions:
-          room_number:
-            1号棟: '1'
-            2号棟: '2'
-            3号棟: '3'
-            4号棟: '4'
-            5号棟: '5'
-            6号棟: '6'
-            7号棟: '7'
-            8号棟: '8'
-            9号棟: '9'
-            10号棟: '10'
+        value_conversion_processor: goshobo_room_number
   tachibanaya:
     db:
       host: incrazetech-app-db-prod.app-prod.incrazetech.dev
