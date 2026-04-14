@@ -312,6 +312,9 @@ def import_facility(
 
         actual_facility_code = resolve_facility_code(row, facility_config, default_facility_code)
         record = make_record_from_row(row, mapping, value_conversions=value_conversions)
+        fixed_values = facility_config.get("fixed_values")
+        if isinstance(fixed_values, dict):
+            record.update(fixed_values)
         record.update(
             build_generated_fields(
                 row,

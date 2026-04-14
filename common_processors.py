@@ -165,14 +165,29 @@ def build_enquete_key(
     suffix: Optional[str] = None,
     value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Optional[str]:
-    room_header = mapping["string"].get("room_number") or mapping["integer"].get("room_number")
+    room_db_key: Optional[str] = None
+    room_header = (
+        mapping["string"].get("room_number")
+        or mapping["integer"].get("room_number")
+        or mapping["text"].get("room_number")
+    )
+    if room_header:
+        room_db_key = "room_number"
+    else:
+        room_header = (
+            mapping["string"].get("room_code")
+            or mapping["integer"].get("room_code")
+            or mapping["text"].get("room_code")
+        )
+        if room_header:
+            room_db_key = "room_code"
     start_date_header = mapping["date"].get("start_date") or mapping["datetime"].get("start_date")
 
-    if not room_header or not start_date_header:
+    if not room_header or not start_date_header or room_db_key is None:
         return None
 
     room_raw_value = apply_value_conversion(
-        row.get(room_header), "room_number", value_conversions or {}
+        row.get(room_header), room_db_key, value_conversions or {}
     )
     room_value = jaconv.z2h(normalize_cell_value(room_raw_value), digit=True, ascii=True)
     if not room_value or not room_value.isdecimal():
