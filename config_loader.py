@@ -36,6 +36,9 @@ def _collect_yaml_paths(path: str) -> List[str]:
 def _extract_mappings(loaded: Dict[str, Any], source_path: str) -> Dict[str, Any]:
     if "mappings" in loaded:
         mappings = loaded.get("mappings") or {}
+        if isinstance(mappings, dict) and MAPPING_SECTIONS.issubset(set(mappings.keys())):
+            mapping_key = os.path.splitext(os.path.basename(source_path))[0]
+            mappings = {mapping_key: mappings}
     elif MAPPING_SECTIONS.issubset(set(loaded.keys())):
         mapping_key = os.path.splitext(os.path.basename(source_path))[0]
         mappings = {mapping_key: loaded}
@@ -94,11 +97,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
     """Load and merge DB config + mapping config.
 
     Supported formats:
-    - split config (recommended):
-      db_config: config_db.yaml
-      mapping_config: config_mapping.yaml
-      + optional per-facility mapping_file(s) in config_db.yaml
-    - legacy single-file config.
+    - single-file config (recommended): config_db.yaml
+      + optional per-facility mapping_file(s) / mapping_files
+    - split config: db_config + mapping_config
     """
 
     root_config = _read_yaml(config_path)
@@ -108,7 +109,9 @@ def load_config(config_path: str) -> Dict[str, Any]:
     mapping_config_ref = root_config.get("mapping_config")
 
     if not db_config_ref and not mapping_config_ref:
-        return root_config
+        merged = deepcopy(root_config)
+        merged.setdefault("mappings", {})
+        return _merge_facility_mappings(merged, base_path)
 
     if not db_config_ref or not mapping_config_ref:
         raise ValueError("Both 'db_config' and 'mapping_config' must be set for split config.")
@@ -143,4 +146,36 @@ def load_config(config_path: str) -> Dict[str, Any]:
             facility_config["mappings"] = existing
 
     merged["corporations"] = merged_corporations
+    return _merge_facility_mappings(merged, base_path)
+
+
+def _merge_facility_mappings(config: Dict[str, Any], base_path: str) -> Dict[str, Any]:
+    merged = deepcopy(config)
+    merged.setdefault("mappings", {})
+    corporations = merged.get("corporations", {}) or {}
+
+    for _, corporation_config in corporations.items():
+        facilities = corporation_config.get("facilities", {}) or {}
+        for _, facility_config in facilities.items():
+            refs = _normalize_mapping_refs(
+                facility_config.get("mapping_files") or facility_config.get("mapping_file")
+            )
+            if not refs:
+                continue
+
+            facility_mappings = _load_mappings_from_refs(base_path, refs)
+            if not facility_mappings:
+                continue
+
+            existing = deepcopy(facility_config.get("mappings", {}) or {})
+            existing.update(facility_mappings)
+            facility_config["mappings"] = existing
+
+            if "mapping" in facility_config:
+                continue
+            if "default" in existing:
+                facility_config["mapping"] = "default"
+            elif len(existing) == 1:
+                facility_config["mapping"] = next(iter(existing.keys()))
+
     return merged

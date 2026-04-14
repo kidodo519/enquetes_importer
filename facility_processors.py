@@ -114,3 +114,48 @@ REQUIRED_HEADER_PROVIDERS: Dict[str, RequiredHeaderProvider] = {
 VALUE_CONVERSION_PROVIDERS: Dict[str, ValueConversionProvider] = {
     "goshobo_room_number": goshobo_room_number_conversions,
 }
+
+
+FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
+    "sankoh.sankoh": {
+        "facility_code_processor": "sankoh_facility_code",
+        "facility_code_source": "宿泊施設",
+        "mapping": "default",
+    },
+    "a_and_c.kifunosato": {
+        "mapping": "a_and_c_japanese",
+    },
+    "a_and_c.roka_japanese": {
+        "mapping": "a_and_c_japanese",
+        "enquete_key_suffix": "ja",
+    },
+    "a_and_c.roka_english": {
+        "mapping": "a_and_c_english",
+        "enquete_key_suffix": "en",
+    },
+    "hachinobo.hachinobo": {
+        "worksheet": "アンケート結果",
+        "table": "enquetes",
+    },
+    "hachinobo.hachinobo_text": {
+        "worksheet": "対応内容",
+        "table": "enquetes_text",
+    },
+    "goshobo.goshobo": {
+        "value_conversion_processor": "goshobo_room_number",
+    },
+}
+
+
+def apply_facility_overrides(
+    corporation: str, facility_name: str, facility_config: Dict[str, Any]
+) -> Dict[str, Any]:
+    key = f"{corporation}.{facility_name}"
+    overrides = FACILITY_OVERRIDES.get(key)
+    if not overrides:
+        return facility_config
+
+    merged = deepcopy(facility_config)
+    for override_key, override_value in overrides.items():
+        merged.setdefault(override_key, override_value)
+    return merged
