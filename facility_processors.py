@@ -8,6 +8,7 @@ from converters import normalize_cell_value
 FacilityCodeResolver = Callable[[Dict[str, Any], Dict[str, Any]], Optional[int]]
 RequiredHeaderProvider = Callable[[Dict[str, Any]], set[str]]
 ValueConversionProvider = Callable[[Dict[str, Any]], Dict[str, Dict[str, Any]]]
+FacilitySettingsProvider = Callable[[Dict[str, Any]], Dict[str, Any]]
 
 DEFAULT_FACILITY_NAME_HEADER = "宿泊施設"
 FACILITY_CODE_MAPS = {
@@ -38,9 +39,7 @@ def resolve_facility_code(
     facility_config: Dict[str, Any],
     default_facility_code: int,
 ) -> int:
-    processor = normalize_cell_value(
-        facility_config.get("facility_code_processor") or facility_config.get("special_processor")
-    ).casefold()
+    processor = _resolve_facility_code_processor(facility_config)
     if processor:
         resolver = FACILITY_CODE_RESOLVERS.get(processor)
         if resolver:
@@ -49,9 +48,7 @@ def resolve_facility_code(
 
 
 def get_additional_required_headers(facility_config: Dict[str, Any]) -> set[str]:
-    processor = normalize_cell_value(
-        facility_config.get("facility_code_processor") or facility_config.get("special_processor")
-    ).casefold()
+    processor = _resolve_required_header_processor(facility_config)
     if processor:
         provider = REQUIRED_HEADER_PROVIDERS.get(processor)
         if provider:
@@ -63,7 +60,7 @@ def build_facility_value_conversions(
     facility_config: Dict[str, Any], base_value_conversions: Dict[str, Dict[str, Any]]
 ) -> Dict[str, Dict[str, Any]]:
     merged = deepcopy(base_value_conversions)
-    processor = normalize_cell_value(facility_config.get("value_conversion_processor")).casefold()
+    processor = _resolve_value_conversion_processor(facility_config)
     if not processor:
         return merged
 
@@ -101,24 +98,116 @@ def goshobo_room_number_conversions(_: Dict[str, Any]) -> Dict[str, Dict[str, An
     return {"room_number": dict(GOSHOBO_ROOM_NUMBER_CONVERSIONS)}
 
 
+def hachinobo_enquetes_settings(_: Dict[str, Any]) -> Dict[str, Any]:
+    return {"worksheet": "アンケート結果", "table": "enquetes"}
+
+
+def hachinobo_text_settings(_: Dict[str, Any]) -> Dict[str, Any]:
+    return {"worksheet": "対応内容", "table": "enquetes_text"}
+
+
+def _get_facility_processors_config(facility_config: Dict[str, Any]) -> Dict[str, Any]:
+    processors = facility_config.get("facility_processors") or {}
+    return processors if isinstance(processors, dict) else {}
+
+
+def _normalize_processor_name(value: Any) -> str:
+    return normalize_cell_value(value).casefold()
+
+
+def _resolve_facility_code_processor(facility_config: Dict[str, Any]) -> str:
+    processors = _get_facility_processors_config(facility_config)
+    facility_code_config = processors.get("facility_code") or {}
+    if isinstance(facility_code_config, dict):
+        processor = _normalize_processor_name(facility_code_config.get("resolver"))
+        if processor:
+            return processor
+    return _normalize_processor_name(
+        facility_config.get("facility_code_processor") or facility_config.get("special_processor")
+    )
+
+
+def _resolve_required_header_processor(facility_config: Dict[str, Any]) -> str:
+    processors = _get_facility_processors_config(facility_config)
+    facility_code_config = processors.get("facility_code") or {}
+    if isinstance(facility_code_config, dict):
+        processor = _normalize_processor_name(facility_code_config.get("required_headers"))
+        if processor:
+            return processor
+        resolver = _normalize_processor_name(facility_code_config.get("resolver"))
+        if resolver:
+            return resolver
+    return _resolve_facility_code_processor(facility_config)
+
+
+def _resolve_value_conversion_processor(facility_config: Dict[str, Any]) -> str:
+    processors = _get_facility_processors_config(facility_config)
+    value_conversion_config = processors.get("value_conversions") or {}
+    if isinstance(value_conversion_config, dict):
+        processor = _normalize_processor_name(value_conversion_config.get("provider"))
+        if processor:
+            return processor
+    return _normalize_processor_name(facility_config.get("value_conversion_processor"))
+
+
+def _resolve_facility_settings_processor(facility_config: Dict[str, Any]) -> str:
+    processors = _get_facility_processors_config(facility_config)
+    settings_config = processors.get("facility_settings") or {}
+    if isinstance(settings_config, dict):
+        processor = _normalize_processor_name(settings_config.get("provider"))
+        if processor:
+            return processor
+    return _normalize_processor_name(facility_config.get("facility_settings_processor"))
+
+
+def _apply_facility_settings(facility_config: Dict[str, Any]) -> Dict[str, Any]:
+    processor = _resolve_facility_settings_processor(facility_config)
+    if not processor:
+        return facility_config
+
+    provider = FACILITY_SETTINGS_PROVIDERS.get(processor)
+    if provider is None:
+        return facility_config
+
+    merged = deepcopy(facility_config)
+    for key, value in provider(facility_config).items():
+        merged.setdefault(key, value)
+    return merged
+
+
 FACILITY_CODE_RESOLVERS: Dict[str, FacilityCodeResolver] = {
     "sankoh": resolve_sankoh_facility_code,
     "sankoh_facility_code": resolve_sankoh_facility_code,
+    "resolve_sankoh_facility_code": resolve_sankoh_facility_code,
 }
 
 REQUIRED_HEADER_PROVIDERS: Dict[str, RequiredHeaderProvider] = {
     "sankoh": get_sankoh_required_headers,
     "sankoh_facility_code": get_sankoh_required_headers,
+    "get_sankoh_required_headers": get_sankoh_required_headers,
 }
 
 VALUE_CONVERSION_PROVIDERS: Dict[str, ValueConversionProvider] = {
     "goshobo_room_number": goshobo_room_number_conversions,
+    "goshobo_room_number_conversions": goshobo_room_number_conversions,
+}
+
+FACILITY_SETTINGS_PROVIDERS: Dict[str, FacilitySettingsProvider] = {
+    "hachinobo_enquetes": hachinobo_enquetes_settings,
+    "hachinobo_enquetes_settings": hachinobo_enquetes_settings,
+    "hachinobo_text": hachinobo_text_settings,
+    "hachinobo_text_settings": hachinobo_text_settings,
 }
 
 
 FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "sankoh.sankoh": {
-        "facility_code_processor": "sankoh_facility_code",
+        "facility_processors": {
+            "facility_code": {
+                "resolver": "resolve_sankoh_facility_code",
+                "required_headers": "get_sankoh_required_headers",
+            }
+        },
         "facility_code_source": "宿泊施設",
         "mapping": "default",
     },
@@ -134,15 +223,17 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
         "enquete_key_suffix": "en",
     },
     "hachinobo.hachinobo": {
-        "worksheet": "アンケート結果",
-        "table": "enquetes",
+        "facility_processors": {
+            "facility_settings": {"provider": "hachinobo_enquetes_settings"}
+        },
     },
     "hachinobo.hachinobo_text": {
-        "worksheet": "対応内容",
-        "table": "enquetes_text",
+        "facility_processors": {"facility_settings": {"provider": "hachinobo_text_settings"}},
     },
     "goshobo.goshobo": {
-        "value_conversion_processor": "goshobo_room_number",
+        "facility_processors": {
+            "value_conversions": {"provider": "goshobo_room_number_conversions"}
+        },
     },
 }
 
@@ -157,5 +248,11 @@ def apply_facility_overrides(
 
     merged = deepcopy(facility_config)
     for override_key, override_value in overrides.items():
-        merged.setdefault(override_key, override_value)
-    return merged
+        if isinstance(override_value, dict) and isinstance(merged.get(override_key), dict):
+            nested = deepcopy(merged[override_key])
+            for nested_key, nested_value in override_value.items():
+                nested.setdefault(nested_key, nested_value)
+            merged[override_key] = nested
+        else:
+            merged.setdefault(override_key, override_value)
+    return _apply_facility_settings(merged)
