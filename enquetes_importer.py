@@ -117,6 +117,28 @@ def build_language_mappings(
     return resolved
 
 
+def build_language_mappings_from_mapping_names(
+    available_mappings: Dict[str, Any], mapping_names: Iterable[str]
+) -> Dict[str, Dict[str, Dict[str, str]]]:
+    resolved: Dict[str, Dict[str, Dict[str, str]]] = {}
+    for mapping_name in mapping_names:
+        normalized_name = normalize_language_key(mapping_name)
+        if normalized_name is None:
+            continue
+        mapping = resolve_mapping(available_mappings, mapping_name)
+        lowered = normalized_name
+
+        if "japanese" in lowered or "日本語" in lowered or lowered.endswith("_ja"):
+            resolved["日本語"] = mapping
+            resolved["japanese"] = mapping
+        if "english" in lowered or "英語" in lowered or lowered.endswith("_en"):
+            resolved["english"] = mapping
+        if lowered in ("default",):
+            resolved["default"] = mapping
+
+    return resolved
+
+
 def open_worksheet(
     client: gspread.Client,
     facility_config: Dict[str, Any],
@@ -228,9 +250,18 @@ def import_facility(
     )
 
     if language_column:
+        if not language_mappings_config:
+            language_mappings_config = {
+                key: key for key in (facility_config.get("mappings", {}) or {}).keys()
+            }
         resolved_language_mappings = build_language_mappings(
             available_mappings, mapping_reference, language_mappings_config
         )
+        if "日本語" not in resolved_language_mappings and "english" not in resolved_language_mappings:
+            inferred = build_language_mappings_from_mapping_names(
+                available_mappings, language_mappings_config.values()
+            )
+            resolved_language_mappings.update(inferred)
         if not resolved_language_mappings:
             raise ValueError("language_mappings did not resolve to any valid mappings.")
         required_headers = {language_column}

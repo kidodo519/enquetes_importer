@@ -39,7 +39,7 @@ corporations:
         spreadsheet:
           id: xxxxx
         mapping_files:
-          - facility_mappings/a_and_c/sankoh.yaml
+          - sankoh_japanese
         mapping: sankoh_japanese
         facility_code_processor: sankoh_facility_code
         facility_code_source: 宿泊施設
@@ -57,11 +57,9 @@ corporations:
         spreadsheet:
           id: xxxxx
         mapping_files:
-          - facility_mappings/goshobo/goshobo.yaml
+          - goshobo_japanese
+          - goshobo_english
         language_column: 言語 / Language
-        language_mappings:
-          日本語: goshobo_japanese
-          English: goshobo_english
         value_conversion_processor: goshobo_room_number
   tachibanaya:
     db:

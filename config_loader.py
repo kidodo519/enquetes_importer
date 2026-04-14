@@ -7,6 +7,9 @@ from typing import Any, Dict, Iterable, List
 
 import yaml
 
+MAPPING_SECTIONS = {"string", "text", "integer", "date", "datetime"}
+DEFAULT_FACILITY_MAPPINGS_DIR = "facility_mappings"
+
 
 def _read_yaml(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as fp:
@@ -33,6 +36,9 @@ def _collect_yaml_paths(path: str) -> List[str]:
 def _extract_mappings(loaded: Dict[str, Any], source_path: str) -> Dict[str, Any]:
     if "mappings" in loaded:
         mappings = loaded.get("mappings") or {}
+    elif MAPPING_SECTIONS.issubset(set(loaded.keys())):
+        mapping_key = os.path.splitext(os.path.basename(source_path))[0]
+        mappings = {mapping_key: loaded}
     else:
         mappings = loaded
     if not isinstance(mappings, dict):
@@ -40,10 +46,26 @@ def _extract_mappings(loaded: Dict[str, Any], source_path: str) -> Dict[str, Any
     return mappings
 
 
+def _resolve_mapping_ref(base_path: str, ref: str) -> str:
+    looks_like_path = os.path.isabs(ref) or os.path.sep in ref or ref.endswith((".yaml", ".yml"))
+    if looks_like_path:
+        return _resolve_path(base_path, ref)
+
+    candidates = [
+        os.path.join(base_path, DEFAULT_FACILITY_MAPPINGS_DIR, f"{ref}.yaml"),
+        os.path.join(base_path, DEFAULT_FACILITY_MAPPINGS_DIR, f"{ref}.yml"),
+        os.path.join(base_path, DEFAULT_FACILITY_MAPPINGS_DIR, ref),
+    ]
+    for candidate in candidates:
+        if os.path.exists(candidate):
+            return candidate
+    return candidates[0]
+
+
 def _load_mappings_from_refs(base_path: str, refs: Iterable[str]) -> Dict[str, Any]:
     merged: Dict[str, Any] = {}
     for ref in refs:
-        resolved = _resolve_path(base_path, ref)
+        resolved = _resolve_mapping_ref(base_path, ref)
         for mapping_path in _collect_yaml_paths(resolved):
             loaded = _read_yaml(mapping_path)
             merged.update(deepcopy(_extract_mappings(loaded, mapping_path)))
