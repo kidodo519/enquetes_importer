@@ -93,6 +93,40 @@ def _normalize_mapping_refs(value: Any) -> List[str]:
     raise TypeError("'mapping_file'/'mapping_files' must be a string or list of strings.")
 
 
+def _collect_facility_mapping_refs(facility_config: Dict[str, Any]) -> List[str]:
+    refs = _normalize_mapping_refs(
+        facility_config.get("mapping_files") or facility_config.get("mapping_file")
+    )
+
+    processors = facility_config.get("facility_processors") or {}
+    if not isinstance(processors, dict):
+        return refs
+
+    mapping_processor = processors.get("mapping") or {}
+    if not isinstance(mapping_processor, dict):
+        return refs
+
+    refs.extend(
+        _normalize_mapping_refs(
+            mapping_processor.get("mapping_files") or mapping_processor.get("mapping_file")
+        )
+    )
+
+    language_mappings = mapping_processor.get("language_mappings") or {}
+    if isinstance(language_mappings, dict):
+        for mapping_ref in language_mappings.values():
+            refs.extend(_normalize_mapping_refs(mapping_ref))
+
+    deduped: List[str] = []
+    seen = set()
+    for ref in refs:
+        if ref in seen:
+            continue
+        seen.add(ref)
+        deduped.append(ref)
+    return deduped
+
+
 def load_config(config_path: str) -> Dict[str, Any]:
     """Load and merge DB config + mapping config.
 
@@ -133,9 +167,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
 
         facilities = corporation_config.get("facilities", {}) or {}
         for facility_name, facility_config in facilities.items():
-            refs = _normalize_mapping_refs(
-                facility_config.get("mapping_files") or facility_config.get("mapping_file")
-            )
+            refs = _collect_facility_mapping_refs(facility_config)
             if not refs:
                 continue
             facility_mappings = _load_mappings_from_refs(base_path, refs)
@@ -157,9 +189,7 @@ def _merge_facility_mappings(config: Dict[str, Any], base_path: str) -> Dict[str
     for _, corporation_config in corporations.items():
         facilities = corporation_config.get("facilities", {}) or {}
         for _, facility_config in facilities.items():
-            refs = _normalize_mapping_refs(
-                facility_config.get("mapping_files") or facility_config.get("mapping_file")
-            )
+            refs = _collect_facility_mapping_refs(facility_config)
             if not refs:
                 continue
 
@@ -173,9 +203,7 @@ def _merge_facility_mappings(config: Dict[str, Any], base_path: str) -> Dict[str
 
             if "mapping" in facility_config:
                 continue
-            if "default" in existing:
-                facility_config["mapping"] = "default"
-            elif len(existing) == 1:
+            if len(existing) == 1:
                 facility_config["mapping"] = next(iter(existing.keys()))
 
     return merged
