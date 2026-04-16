@@ -9,6 +9,7 @@ FacilityCodeResolver = Callable[[Dict[str, Any], Dict[str, Any]], Optional[int]]
 RequiredHeaderProvider = Callable[[Dict[str, Any]], set[str]]
 ValueConversionProvider = Callable[[Dict[str, Any]], Dict[str, Dict[str, Any]]]
 FacilitySettingsProvider = Callable[[Dict[str, Any]], Dict[str, Any]]
+MappingSettingsProvider = Callable[[Dict[str, Any]], Dict[str, Any]]
 
 DEFAULT_FACILITY_NAME_HEADER = "宿泊施設"
 FACILITY_CODE_MAPS = {
@@ -106,6 +107,23 @@ def hachinobo_text_settings(_: Dict[str, Any]) -> Dict[str, Any]:
     return {"worksheet": "対応内容", "table": "enquetes_text"}
 
 
+def goshobo_language_mapping_settings(facility_config: Dict[str, Any]) -> Dict[str, Any]:
+    processors = _get_facility_processors_config(facility_config)
+    mapping_config = processors.get("mapping") or {}
+    if not isinstance(mapping_config, dict):
+        return {}
+
+    language_column = normalize_cell_value(mapping_config.get("language_column"))
+    language_mappings = mapping_config.get("language_mappings")
+    if not isinstance(language_mappings, dict):
+        return {}
+
+    resolved: Dict[str, Any] = {"language_mappings": deepcopy(language_mappings)}
+    if language_column:
+        resolved["language_column"] = language_column
+    return resolved
+
+
 def _get_facility_processors_config(facility_config: Dict[str, Any]) -> Dict[str, Any]:
     processors = facility_config.get("facility_processors") or {}
     return processors if isinstance(processors, dict) else {}
@@ -175,6 +193,31 @@ def _apply_facility_settings(facility_config: Dict[str, Any]) -> Dict[str, Any]:
     return merged
 
 
+def _resolve_mapping_settings_processor(facility_config: Dict[str, Any]) -> str:
+    processors = _get_facility_processors_config(facility_config)
+    mapping_config = processors.get("mapping") or {}
+    if isinstance(mapping_config, dict):
+        processor = _normalize_processor_name(mapping_config.get("provider"))
+        if processor:
+            return processor
+    return _normalize_processor_name(facility_config.get("mapping_processor"))
+
+
+def _apply_mapping_settings(facility_config: Dict[str, Any]) -> Dict[str, Any]:
+    processor = _resolve_mapping_settings_processor(facility_config)
+    if not processor:
+        return facility_config
+
+    provider = MAPPING_SETTINGS_PROVIDERS.get(processor)
+    if provider is None:
+        return facility_config
+
+    merged = deepcopy(facility_config)
+    for key, value in provider(facility_config).items():
+        merged.setdefault(key, value)
+    return merged
+
+
 FACILITY_CODE_RESOLVERS: Dict[str, FacilityCodeResolver] = {
     "sankoh": resolve_sankoh_facility_code,
     "sankoh_facility_code": resolve_sankoh_facility_code,
@@ -199,6 +242,11 @@ FACILITY_SETTINGS_PROVIDERS: Dict[str, FacilitySettingsProvider] = {
     "hachinobo_text_settings": hachinobo_text_settings,
 }
 
+MAPPING_SETTINGS_PROVIDERS: Dict[str, MappingSettingsProvider] = {
+    "goshobo_language_mapping": goshobo_language_mapping_settings,
+    "goshobo_language_mapping_settings": goshobo_language_mapping_settings,
+}
+
 
 FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "sankoh.sankoh": {
@@ -210,7 +258,7 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
         },
         "facility_code_source": "宿泊施設",
         "fixed_values": {"enquete_system_name": "spreadsheet"},
-        "mapping": "default",
+        "mapping": "sankoh",
     },
     "a_and_c.kifunosato": {
         "mapping": "a_and_c_japanese",
@@ -233,7 +281,15 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
     },
     "goshobo.goshobo": {
         "facility_processors": {
-            "value_conversions": {"provider": "goshobo_room_number_conversions"}
+            "value_conversions": {"provider": "goshobo_room_number_conversions"},
+            "mapping": {
+                "provider": "goshobo_language_mapping_settings",
+                "language_column": "language",
+                "language_mappings": {
+                    "日本語": "goshobo_japanese",
+                    "english": "goshobo_english",
+                },
+            },
         },
     },
 }
@@ -242,18 +298,17 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
 def apply_facility_overrides(
     corporation: str, facility_name: str, facility_config: Dict[str, Any]
 ) -> Dict[str, Any]:
+    merged = deepcopy(facility_config)
     key = f"{corporation}.{facility_name}"
     overrides = FACILITY_OVERRIDES.get(key)
-    if not overrides:
-        return facility_config
-
-    merged = deepcopy(facility_config)
-    for override_key, override_value in overrides.items():
-        if isinstance(override_value, dict) and isinstance(merged.get(override_key), dict):
-            nested = deepcopy(merged[override_key])
-            for nested_key, nested_value in override_value.items():
-                nested.setdefault(nested_key, nested_value)
-            merged[override_key] = nested
-        else:
-            merged.setdefault(override_key, override_value)
-    return _apply_facility_settings(merged)
+    if overrides:
+        for override_key, override_value in overrides.items():
+            if isinstance(override_value, dict) and isinstance(merged.get(override_key), dict):
+                nested = deepcopy(merged[override_key])
+                for nested_key, nested_value in override_value.items():
+                    nested.setdefault(nested_key, nested_value)
+                merged[override_key] = nested
+            else:
+                merged.setdefault(override_key, override_value)
+    merged = _apply_facility_settings(merged)
+    return _apply_mapping_settings(merged)

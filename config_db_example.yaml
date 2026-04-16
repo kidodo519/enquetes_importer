@@ -165,9 +165,13 @@ corporations:
           id: xxxx
           worksheet: フォームの回答 1
         mapping_files:
-          - goshobo_japanese
-          - goshobo_english
         facility_processors:
+          mapping:
+            provider: goshobo_language_mapping_settings
+            language_column: language
+            language_mappings:
+              日本語: goshobo_japanese
+              english: goshobo_english
           value_conversions:
             provider: goshobo_room_number_conversions
 

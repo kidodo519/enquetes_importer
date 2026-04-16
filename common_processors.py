@@ -56,7 +56,7 @@ def normalize_mapping(mapping: Dict[str, Any]) -> Dict[str, Dict[str, str]]:
 
 def resolve_mapping(mappings: Dict[str, Any], reference: Any) -> Dict[str, Dict[str, str]]:
     if reference is None:
-        reference = "default"
+        raise ValueError("Mapping reference is required.")
 
     if isinstance(reference, str):
         if reference not in mappings:

@@ -112,9 +112,6 @@ def build_language_mappings(
             normalized_key = "default"
         resolved[normalized_key] = resolve_mapping(available_mappings, reference)
 
-    if "default" not in resolved and mapping_reference is not None:
-        resolved["default"] = resolve_mapping(available_mappings, mapping_reference)
-
     return resolved
 
 
@@ -274,6 +271,10 @@ def import_facility(
             iter(resolved_language_mappings.values())
         )
     else:
+        if mapping_reference is None:
+            raise ValueError(
+                "Mapping is required when language_column is not configured."
+            )
         mapping_for_schema = resolve_mapping(available_mappings, mapping_reference)
         resolved_language_mappings = {"default": mapping_for_schema}
         required_headers = extract_required_headers(mapping_for_schema)
