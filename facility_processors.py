@@ -298,19 +298,17 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
 def apply_facility_overrides(
     corporation: str, facility_name: str, facility_config: Dict[str, Any]
 ) -> Dict[str, Any]:
+    merged = deepcopy(facility_config)
     key = f"{corporation}.{facility_name}"
     overrides = FACILITY_OVERRIDES.get(key)
-    if not overrides:
-        return facility_config
-
-    merged = deepcopy(facility_config)
-    for override_key, override_value in overrides.items():
-        if isinstance(override_value, dict) and isinstance(merged.get(override_key), dict):
-            nested = deepcopy(merged[override_key])
-            for nested_key, nested_value in override_value.items():
-                nested.setdefault(nested_key, nested_value)
-            merged[override_key] = nested
-        else:
-            merged.setdefault(override_key, override_value)
+    if overrides:
+        for override_key, override_value in overrides.items():
+            if isinstance(override_value, dict) and isinstance(merged.get(override_key), dict):
+                nested = deepcopy(merged[override_key])
+                for nested_key, nested_value in override_value.items():
+                    nested.setdefault(nested_key, nested_value)
+                merged[override_key] = nested
+            else:
+                merged.setdefault(override_key, override_value)
     merged = _apply_facility_settings(merged)
     return _apply_mapping_settings(merged)
