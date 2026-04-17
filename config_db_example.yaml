@@ -4,6 +4,10 @@ csv:
 google:
   worksheet: フォームの回答 1
 
+slack_error_notification:
+  enabled: false
+  webhook_url:
+
 corporations:
   sankoh:
     db:

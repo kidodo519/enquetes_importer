@@ -1,7 +1,11 @@
 import logging
 import os
+import json
+import time
 from argparse import ArgumentParser
 from typing import Any, Dict, Iterable, List, Optional, Set
+from urllib import request
+from urllib.error import HTTPError, URLError
 
 import gspread
 import psycopg2
@@ -36,6 +40,68 @@ DEFAULT_SCOPE = [
 ]
 
 logger = logging.getLogger(__name__)
+SLACK_NOTIFICATION_MAX_RETRIES = 3
+
+
+def send_slack_error_notification(
+    notification_config: Dict[str, Any],
+    corporation: str,
+    facility_name: str,
+    error_message: str,
+) -> None:
+    enabled = bool(notification_config.get("enabled", False))
+    webhook_url = normalize_optional_string(notification_config.get("webhook_url"))
+
+    if not enabled:
+        return
+
+    if not webhook_url:
+        logger.warning(
+            "Slack error notification is enabled, but webhook_url is not configured."
+        )
+        return
+
+    text = (
+        "enquetes_importer facility error\n"
+        f"corporation: {corporation}\n"
+        f"facility: {facility_name}\n"
+        f"error: {error_message}"
+    )
+    payload = json.dumps({"text": text}).encode("utf-8")
+    req = request.Request(
+        webhook_url,
+        data=payload,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    for attempt in range(SLACK_NOTIFICATION_MAX_RETRIES + 1):
+        try:
+            with request.urlopen(req, timeout=10) as response:
+                response.read()
+            return
+        except HTTPError as exc:
+            if exc.code == 503 and attempt < SLACK_NOTIFICATION_MAX_RETRIES:
+                logger.warning(
+                    (
+                        "Slack webhook returned 503 for %s/%s "
+                        "(attempt %d/%d). Retrying..."
+                    ),
+                    corporation,
+                    facility_name,
+                    attempt + 1,
+                    SLACK_NOTIFICATION_MAX_RETRIES,
+                )
+                time.sleep(1)
+                continue
+            logger.exception(
+                "Failed to send Slack notification for %s/%s", corporation, facility_name
+            )
+            return
+        except URLError:
+            logger.exception(
+                "Failed to send Slack notification for %s/%s", corporation, facility_name
+            )
+            return
 
 
 def build_parser() -> ArgumentParser:
@@ -346,6 +412,7 @@ def main() -> None:
     if not os.path.isabs(config_path):
         config_path = os.path.join(base_path, config_path)
     config = load_config(config_path)
+    notification_config = config.get("slack_error_notification", {}) or {}
 
     mappings = config.get("mappings", {})
     corporations = config.get("corporations", {})
@@ -414,10 +481,18 @@ def main() -> None:
                 except ValueError as exc:
                     connection.rollback()
                     logger.warning("Skipping facility %s/%s: %s", corporation, facility_name, exc)
+                    send_slack_error_notification(
+                        notification_config, corporation, facility_name, str(exc)
+                    )
                 except Exception:
                     connection.rollback()
                     logger.exception("Failed to import data for facility %s/%s", corporation, facility_name)
-                    raise
+                    send_slack_error_notification(
+                        notification_config,
+                        corporation,
+                        facility_name,
+                        "Unexpected error. See application logs for full traceback.",
+                    )
         finally:
             connection.close()
 
