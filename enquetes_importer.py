@@ -478,6 +478,9 @@ def import_facility(
                 enquete_key_prefix=facility_config.get("enquete_key_prefix"),
                 enquete_key_suffix=facility_config.get("enquete_key_suffix"),
                 value_conversions=value_conversions,
+                enquete_key_keep_room_leading_zeros=bool(
+                    facility_config.get("enquete_key_keep_room_leading_zeros", False)
+                ),
             )
         except ValueError as exc:
             if str(exc).startswith("enquete_key generation failed:"):
