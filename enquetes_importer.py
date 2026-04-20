@@ -150,6 +150,17 @@ def _is_quota_exceeded_error(exc: gspread.exceptions.APIError) -> bool:
     return "Quota exceeded" in str(exc)
 
 
+def _is_service_unavailable_error(exc: gspread.exceptions.APIError) -> bool:
+    status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    if status_code == 503:
+        return True
+    return "service is currently unavailable" in str(exc).lower()
+
+
+def _is_retryable_api_error(exc: gspread.exceptions.APIError) -> bool:
+    return _is_quota_exceeded_error(exc) or _is_service_unavailable_error(exc)
+
+
 def call_with_gspread_retry(
     operation_name: str,
     func: Callable[[], T],
@@ -160,12 +171,12 @@ def call_with_gspread_retry(
         try:
             return func()
         except gspread.exceptions.APIError as exc:
-            if not _is_quota_exceeded_error(exc) or attempt >= GSPREAD_QUOTA_MAX_RETRIES:
+            if not _is_retryable_api_error(exc) or attempt >= GSPREAD_QUOTA_MAX_RETRIES:
                 raise
             wait_seconds = GSPREAD_QUOTA_RETRY_BASE_SECONDS * (2**attempt)
             logger.warning(
                 (
-                    "Google Sheets API quota exceeded during %s for %s/%s "
+                    "Google Sheets API temporary error during %s for %s/%s "
                     "(attempt %d/%d). Retrying in %d seconds..."
                 ),
                 operation_name,
@@ -297,18 +308,38 @@ def extract_required_headers(mapping: Dict[str, Dict[str, str]]) -> Set[str]:
     return headers
 
 
-def read_records(worksheet: gspread.Worksheet, required_headers: Set[str]) -> List[Dict[str, Any]]:
+def resolve_header_row_number(facility_config: Dict[str, Any]) -> int:
+    raw = normalize_optional_string(facility_config.get("header_row"))
+    if raw is None:
+        return 1
+    try:
+        value = int(raw)
+    except (TypeError, ValueError) as exc:
+        raise ValueError("'header_row' must be an integer (1 or greater).") from exc
+    if value < 1:
+        raise ValueError("'header_row' must be an integer (1 or greater).")
+    return value
+
+
+def read_records(
+    worksheet: gspread.Worksheet, required_headers: Set[str], header_row_number: int = 1
+) -> List[Dict[str, Any]]:
     rows = worksheet.get_all_values()
     if not rows:
         return []
 
-    header_index = build_header_index(rows[0])
+    if header_row_number > len(rows):
+        raise ValueError(
+            f"Header row {header_row_number} does not exist in worksheet (rows={len(rows)})."
+        )
+
+    header_index = build_header_index(rows[header_row_number - 1])
     missing = sorted(required_headers - set(header_index))
     if missing:
         raise ValueError("Missing required header(s) in worksheet: " + ", ".join(missing))
 
     records: List[Dict[str, Any]] = []
-    for raw_row in rows[1:]:
+    for raw_row in rows[header_row_number:]:
         if not any(normalize_cell_value(cell) for cell in raw_row):
             continue
 
@@ -386,6 +417,7 @@ def import_facility(
         required_headers = extract_required_headers(mapping_for_schema)
 
     required_headers.update(get_additional_required_headers(facility_config))
+    header_row_number = resolve_header_row_number(facility_config)
 
     worksheet = call_with_gspread_retry(
         "open_worksheet",
@@ -395,7 +427,7 @@ def import_facility(
     )
     records = call_with_gspread_retry(
         "read_records",
-        lambda: read_records(worksheet, required_headers),
+        lambda: read_records(worksheet, required_headers, header_row_number),
         corporation,
         facility_name,
     )
