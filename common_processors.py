@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime
+import re
 from typing import Any, Dict, Optional
 
 import jaconv
@@ -164,6 +165,7 @@ def build_enquete_key(
     prefix: Optional[str] = None,
     suffix: Optional[str] = None,
     value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
+    keep_room_leading_zeros: bool = False,
 ) -> str:
     room_db_key: Optional[str] = None
     room_header = (
@@ -192,10 +194,14 @@ def build_enquete_key(
         row.get(room_header), room_db_key, value_conversions or {}
     )
     room_value = jaconv.z2h(normalize_cell_value(room_raw_value), digit=True, ascii=True)
+    if keep_room_leading_zeros and room_value and not room_value.isdecimal():
+        matched = re.match(r"^(\d+)", room_value)
+        if matched:
+            room_value = matched.group(1)
     if not room_value or not room_value.isdecimal():
-        raise ValueError(
-            f"enquete_key generation failed: invalid room value '{room_raw_value}'."
-        )
+        raise ValueError(f"enquete_key generation failed: invalid room value '{room_raw_value}'.")
+    if not keep_room_leading_zeros:
+        room_value = str(int(room_value))
 
     start_date_value = normalize_cell_value(row.get(start_date_header))
     parsed = parse_datetime_value(start_date_value)
@@ -219,6 +225,7 @@ def build_generated_fields(
     enquete_key_prefix: Optional[str] = None,
     enquete_key_suffix: Optional[str] = None,
     value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
+    enquete_key_keep_room_leading_zeros: bool = False,
 ) -> Dict[str, Any]:
     enquete_key = build_enquete_key(
         row,
@@ -227,6 +234,7 @@ def build_generated_fields(
         prefix=enquete_key_prefix,
         suffix=enquete_key_suffix,
         value_conversions=value_conversions,
+        keep_room_leading_zeros=enquete_key_keep_room_leading_zeros,
     )
     return {
         "facility_code": facility_code,
