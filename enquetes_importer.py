@@ -3,7 +3,7 @@ import os
 import json
 import time
 from argparse import ArgumentParser
-from typing import Any, Dict, Iterable, List, Optional, Set
+from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar
 from urllib import request
 from urllib.error import HTTPError, URLError
 
@@ -41,6 +41,9 @@ DEFAULT_SCOPE = [
 
 logger = logging.getLogger(__name__)
 SLACK_NOTIFICATION_MAX_RETRIES = 3
+GSPREAD_QUOTA_MAX_RETRIES = 5
+GSPREAD_QUOTA_RETRY_BASE_SECONDS = 5
+T = TypeVar("T")
 
 
 def send_slack_error_notification(
@@ -138,6 +141,43 @@ def build_parser() -> ArgumentParser:
         help="Destination table name. Defaults to '%(default)s'.",
     )
     return parser
+
+
+def _is_quota_exceeded_error(exc: gspread.exceptions.APIError) -> bool:
+    status_code = getattr(getattr(exc, "response", None), "status_code", None)
+    if status_code == 429:
+        return True
+    return "Quota exceeded" in str(exc)
+
+
+def call_with_gspread_retry(
+    operation_name: str,
+    func: Callable[[], T],
+    corporation: str,
+    facility_name: str,
+) -> T:
+    for attempt in range(GSPREAD_QUOTA_MAX_RETRIES + 1):
+        try:
+            return func()
+        except gspread.exceptions.APIError as exc:
+            if not _is_quota_exceeded_error(exc) or attempt >= GSPREAD_QUOTA_MAX_RETRIES:
+                raise
+            wait_seconds = GSPREAD_QUOTA_RETRY_BASE_SECONDS * (2**attempt)
+            logger.warning(
+                (
+                    "Google Sheets API quota exceeded during %s for %s/%s "
+                    "(attempt %d/%d). Retrying in %d seconds..."
+                ),
+                operation_name,
+                corporation,
+                facility_name,
+                attempt + 1,
+                GSPREAD_QUOTA_MAX_RETRIES + 1,
+                wait_seconds,
+            )
+            time.sleep(wait_seconds)
+
+    raise RuntimeError("Unreachable code path in call_with_gspread_retry.")
 
 
 def create_gspread_client(base_path: str) -> gspread.Client:
@@ -347,8 +387,18 @@ def import_facility(
 
     required_headers.update(get_additional_required_headers(facility_config))
 
-    worksheet = open_worksheet(client, facility_config, default_worksheet)
-    records = read_records(worksheet, required_headers)
+    worksheet = call_with_gspread_retry(
+        "open_worksheet",
+        lambda: open_worksheet(client, facility_config, default_worksheet),
+        corporation,
+        facility_name,
+    )
+    records = call_with_gspread_retry(
+        "read_records",
+        lambda: read_records(worksheet, required_headers),
+        corporation,
+        facility_name,
+    )
 
     logger.info("Fetched %d rows from %s/%s", len(records), corporation, facility_name)
 
@@ -367,6 +417,7 @@ def import_facility(
     )
 
     buffer: List[List[Any]] = []
+    skipped_enquete_key_rows = 0
     for row in records:
         if language_column:
             language_value = normalize_language_key(row.get(language_column))
@@ -386,8 +437,8 @@ def import_facility(
         record = make_record_from_row(row, mapping, value_conversions=value_conversions)
         if isinstance(fixed_values, dict):
             record.update(fixed_values)
-        record.update(
-            build_generated_fields(
+        try:
+            generated_fields = build_generated_fields(
                 row,
                 mapping,
                 actual_facility_code,
@@ -395,8 +446,21 @@ def import_facility(
                 enquete_key_suffix=facility_config.get("enquete_key_suffix"),
                 value_conversions=value_conversions,
             )
-        )
+        except ValueError as exc:
+            if str(exc).startswith("enquete_key generation failed:"):
+                skipped_enquete_key_rows += 1
+                continue
+            raise
+        record.update(generated_fields)
         buffer.append([record.get(key) for key in ordered_keys])
+
+    if skipped_enquete_key_rows:
+        logger.warning(
+            "Skipped %d row(s) with invalid enquete_key source values in %s/%s.",
+            skipped_enquete_key_rows,
+            corporation,
+            facility_name,
+        )
 
     insert_rows(connection, cursor, facility_table, ordered_keys, buffer, corporation, facility_name)
 

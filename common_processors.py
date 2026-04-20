@@ -164,7 +164,7 @@ def build_enquete_key(
     prefix: Optional[str] = None,
     suffix: Optional[str] = None,
     value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
-) -> Optional[str]:
+) -> str:
     room_db_key: Optional[str] = None
     room_header = (
         mapping["string"].get("room_number")
@@ -184,19 +184,25 @@ def build_enquete_key(
     start_date_header = mapping["date"].get("start_date") or mapping["datetime"].get("start_date")
 
     if not room_header or not start_date_header or room_db_key is None:
-        return None
+        raise ValueError(
+            "enquete_key generation requires room_number/room_code and start_date mappings."
+        )
 
     room_raw_value = apply_value_conversion(
         row.get(room_header), room_db_key, value_conversions or {}
     )
     room_value = jaconv.z2h(normalize_cell_value(room_raw_value), digit=True, ascii=True)
     if not room_value or not room_value.isdecimal():
-        return None
+        raise ValueError(
+            f"enquete_key generation failed: invalid room value '{room_raw_value}'."
+        )
 
     start_date_value = normalize_cell_value(row.get(start_date_header))
     parsed = parse_datetime_value(start_date_value)
     if not parsed:
-        return None
+        raise ValueError(
+            f"enquete_key generation failed: invalid start_date value '{start_date_value}'."
+        )
 
     base_key = f"{room_value}-{parsed.strftime('%Y%m%d')}-{facility_code}"
     if prefix:
@@ -214,15 +220,16 @@ def build_generated_fields(
     enquete_key_suffix: Optional[str] = None,
     value_conversions: Optional[Dict[str, Dict[str, Any]]] = None,
 ) -> Dict[str, Any]:
+    enquete_key = build_enquete_key(
+        row,
+        mapping,
+        facility_code,
+        prefix=enquete_key_prefix,
+        suffix=enquete_key_suffix,
+        value_conversions=value_conversions,
+    )
     return {
         "facility_code": facility_code,
-        "enquete_key": build_enquete_key(
-            row,
-            mapping,
-            facility_code,
-            prefix=enquete_key_prefix,
-            suffix=enquete_key_suffix,
-            value_conversions=value_conversions,
-        ),
+        "enquete_key": enquete_key,
         "import_date": datetime.now(),
     }
