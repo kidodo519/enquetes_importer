@@ -10,6 +10,7 @@ RequiredHeaderProvider = Callable[[Dict[str, Any]], set[str]]
 ValueConversionProvider = Callable[[Dict[str, Any]], Dict[str, Dict[str, Any]]]
 FacilitySettingsProvider = Callable[[Dict[str, Any]], Dict[str, Any]]
 MappingSettingsProvider = Callable[[Dict[str, Any]], Dict[str, Any]]
+EnqueteKeySettingsProvider = Callable[[Dict[str, Any]], Dict[str, Any]]
 
 DEFAULT_FACILITY_NAME_HEADER = "宿泊施設"
 FACILITY_CODE_MAPS = {
@@ -124,6 +125,10 @@ def goshobo_language_mapping_settings(facility_config: Dict[str, Any]) -> Dict[s
     return resolved
 
 
+def goshobo_enquete_key_settings(_: Dict[str, Any]) -> Dict[str, Any]:
+    return {"enquete_key_keep_room_leading_zeros": True}
+
+
 def _get_facility_processors_config(facility_config: Dict[str, Any]) -> Dict[str, Any]:
     processors = facility_config.get("facility_processors") or {}
     return processors if isinstance(processors, dict) else {}
@@ -218,6 +223,31 @@ def _apply_mapping_settings(facility_config: Dict[str, Any]) -> Dict[str, Any]:
     return merged
 
 
+def _resolve_enquete_key_settings_processor(facility_config: Dict[str, Any]) -> str:
+    processors = _get_facility_processors_config(facility_config)
+    enquete_key_config = processors.get("enquete_key") or {}
+    if isinstance(enquete_key_config, dict):
+        processor = _normalize_processor_name(enquete_key_config.get("provider"))
+        if processor:
+            return processor
+    return _normalize_processor_name(facility_config.get("enquete_key_processor"))
+
+
+def _apply_enquete_key_settings(facility_config: Dict[str, Any]) -> Dict[str, Any]:
+    processor = _resolve_enquete_key_settings_processor(facility_config)
+    if not processor:
+        return facility_config
+
+    provider = ENQUETE_KEY_SETTINGS_PROVIDERS.get(processor)
+    if provider is None:
+        return facility_config
+
+    merged = deepcopy(facility_config)
+    for key, value in provider(facility_config).items():
+        merged.setdefault(key, value)
+    return merged
+
+
 FACILITY_CODE_RESOLVERS: Dict[str, FacilityCodeResolver] = {
     "sankoh": resolve_sankoh_facility_code,
     "sankoh_facility_code": resolve_sankoh_facility_code,
@@ -245,6 +275,10 @@ FACILITY_SETTINGS_PROVIDERS: Dict[str, FacilitySettingsProvider] = {
 MAPPING_SETTINGS_PROVIDERS: Dict[str, MappingSettingsProvider] = {
     "goshobo_language_mapping": goshobo_language_mapping_settings,
     "goshobo_language_mapping_settings": goshobo_language_mapping_settings,
+}
+
+ENQUETE_KEY_SETTINGS_PROVIDERS: Dict[str, EnqueteKeySettingsProvider] = {
+    "goshobo_enquete_key_settings": goshobo_enquete_key_settings,
 }
 
 
@@ -280,6 +314,7 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
     "goshobo.goshobo": {
         "facility_processors": {
             "value_conversions": {"provider": "goshobo_room_number_conversions"},
+            "enquete_key": {"provider": "goshobo_enquete_key_settings"},
             "mapping": {
                 "provider": "goshobo_language_mapping_settings",
                 "language_column": "language",
@@ -309,4 +344,5 @@ def apply_facility_overrides(
             else:
                 merged.setdefault(override_key, override_value)
     merged = _apply_facility_settings(merged)
-    return _apply_mapping_settings(merged)
+    merged = _apply_mapping_settings(merged)
+    return _apply_enquete_key_settings(merged)
