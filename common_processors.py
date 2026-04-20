@@ -193,7 +193,9 @@ def build_enquete_key(
     room_raw_value = apply_value_conversion(
         row.get(room_header), room_db_key, value_conversions or {}
     )
-    room_value = jaconv.z2h(normalize_cell_value(room_raw_value), digit=True, ascii=True)
+    room_value = jaconv.z2h(
+        normalize_cell_value(room_raw_value), digit=True, ascii=True, kana=False
+    )
     if not room_value:
         raise ValueError(f"enquete_key generation failed: invalid room value '{room_raw_value}'.")
 
