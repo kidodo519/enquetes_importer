@@ -3,6 +3,7 @@ import os
 import json
 import time
 from argparse import ArgumentParser
+from datetime import datetime
 from typing import Any, Callable, Dict, Iterable, List, Optional, Set, TypeVar
 from urllib import request
 from urllib.error import HTTPError, URLError
@@ -449,7 +450,7 @@ def import_facility(
     )
 
     buffer: List[List[Any]] = []
-    skipped_enquete_key_rows = 0
+    blank_enquete_key_rows = 0
     for row in records:
         if language_column:
             language_value = normalize_language_key(row.get(language_column))
@@ -480,16 +481,21 @@ def import_facility(
             )
         except ValueError as exc:
             if str(exc).startswith("enquete_key generation failed:"):
-                skipped_enquete_key_rows += 1
-                continue
-            raise
+                blank_enquete_key_rows += 1
+                generated_fields = {
+                    "facility_code": actual_facility_code,
+                    "enquete_key": "",
+                    "import_date": datetime.now(),
+                }
+            else:
+                raise
         record.update(generated_fields)
         buffer.append([record.get(key) for key in ordered_keys])
 
-    if skipped_enquete_key_rows:
+    if blank_enquete_key_rows:
         logger.warning(
-            "Skipped %d row(s) with invalid enquete_key source values in %s/%s.",
-            skipped_enquete_key_rows,
+            "Inserted %d row(s) with blank enquete_key due to invalid source values in %s/%s.",
+            blank_enquete_key_rows,
             corporation,
             facility_name,
         )

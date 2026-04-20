@@ -202,3 +202,8 @@ corporations:
   - フォーム項目名の変更（文言差分、句読点/全角半角差分を含む）
   - 参照している worksheet が想定と異なる
   - mapping ファイル側が最新フォーム仕様に追随できていない
+
+### `enquete_key generation failed: ...`
+
+- `room_number/room_code` や `start_date` が不正で `enquete_key` が生成できない行でも、現在はスキップせず
+  `enquete_key` を空文字で取り込みます（警告ログは出力されます）。
