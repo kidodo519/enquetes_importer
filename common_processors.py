@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from copy import deepcopy
 from datetime import datetime
+import re
 from typing import Any, Dict, Optional
 
 import jaconv
@@ -193,10 +194,12 @@ def build_enquete_key(
         row.get(room_header), room_db_key, value_conversions or {}
     )
     room_value = jaconv.z2h(normalize_cell_value(room_raw_value), digit=True, ascii=True)
+    if keep_room_leading_zeros and room_value and not room_value.isdecimal():
+        matched = re.match(r"^(\d+)", room_value)
+        if matched:
+            room_value = matched.group(1)
     if not room_value or not room_value.isdecimal():
-        raise ValueError(
-            f"enquete_key generation failed: invalid room value '{room_raw_value}'."
-        )
+        raise ValueError(f"enquete_key generation failed: invalid room value '{room_raw_value}'.")
     if not keep_room_leading_zeros:
         room_value = str(int(room_value))
 
