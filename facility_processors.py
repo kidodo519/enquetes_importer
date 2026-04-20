@@ -265,11 +265,9 @@ FACILITY_OVERRIDES: Dict[str, Dict[str, Any]] = {
     },
     "a_and_c.roka_japanese": {
         "mapping": "a_and_c_japanese",
-        "enquete_key_suffix": "ja",
     },
     "a_and_c.roka_english": {
         "mapping": "a_and_c_english",
-        "enquete_key_suffix": "en",
     },
     "hachinobo.hachinobo": {
         "facility_processors": {
